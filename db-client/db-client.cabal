@@ -34,6 +34,8 @@ library
   ghc-options: -fshow-loaded-modules -ferror-spans
   build-depends:
       base >=4.7 && <5
+    , HDBC
+    , HDBC-odbc
     , mysql
     , mysql-simple
   default-language: Haskell2010
