@@ -31,15 +31,22 @@ library
       Paths_rest_api
   hs-source-dirs:
       src
-  ghc-options: -fshow-loaded-modules -ferror-spans
   build-depends:
       base >=4.7 && <5
     , aeson
+    , lens
     , wai
     , warp
+    , warp-tls
     , servant
     , servant-server
+    , servant-generic
+    , swagger2
+    , servant-swagger
+    , servant-swagger-ui
+    , servant-swagger-ui-redoc
   default-language: Haskell2010
+  ghc-options: -fshow-loaded-modules -ferror-spans
 
 executable rest-api-exe
   main-is: Main.hs

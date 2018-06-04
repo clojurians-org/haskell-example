@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Lib
     ( 
@@ -8,9 +10,9 @@ import Database.MySQL.Base (ConnectInfo(..), Connection, defaultConnectInfo, con
 import Database.MySQL.Base.Types (Field)
 import Database.MySQL.Simple (Query(..), query_, execute_, Only)
 
-import qualified Database.HDBC as H
-import qualified Database.HDBC.ODBC as HO
+import Database.HDBC (quickQuery, disconnect, SqlValue, commit)
 import Database.HDBC.ODBC (connectODBC)
+import qualified Database.HDBC.ODBC as HO
 
 
 mysqlConnInfo = defaultConnectInfo {
@@ -20,19 +22,19 @@ mysqlConnInfo = defaultConnectInfo {
 , connectPassword = "mysql"
 }
 
-mysqlConn :: IO Connection
-mysqlConn = connect mysqlConnInfo
-
-
 query1 :: IO Connection -> IO [Only Int]
-query1 mysqlConn = bracket  mysqlConn close $ \conn ->
+query1 mysqlConn = bracket  (connect mysqlConnInfo) close $ \conn ->
   query_ conn "select 1 + 1"
 
 query2 :: IO Connection -> IO [(Int, String)]
-query2 mysqlConn = bracket  mysqlConn close $ \conn ->
+query2 mysqlConn = bracket  (connect mysqlConnInfo) close $ \conn ->
   query_ conn "select 1 + 1, 'a'"
 
 oracleConnInfo = "Driver={MyOracle};DBQ=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=10.129.35.238)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=EDWDBUAT)(SERVER=DEDICATED)));UID=fsd;PWD=fsd;"
 
-oracleConn :: IO HO.Connection
-oracleConn = connectODBC oracleConnInfo
+
+oraQuery1 :: IO [[SqlValue]]
+oraQuery1 = bracket (connectODBC oracleConnInfo) (\x -> do {commit x; putStrLn "hello"; disconnect x}) $ \conn ->
+  quickQuery conn "select 1 + 1 as a, 2 + 2 as b from dual" []
+
+
