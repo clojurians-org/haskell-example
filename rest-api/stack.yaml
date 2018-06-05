@@ -40,8 +40,10 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - file-embed-lzma-0
+- servant-swagger-ui-0.3.0.3.13.2
 - servant-swagger-ui-core-0.3
 - servant-swagger-ui-redoc-0.3.0.1.21.2
+
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

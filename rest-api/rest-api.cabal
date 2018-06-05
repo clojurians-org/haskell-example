@@ -33,8 +33,12 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , bytestring
+    , text
     , aeson
     , lens
+    , file-embed-lzma
+    , neat-interpolation
     , wai
     , warp
     , warp-tls
@@ -44,6 +48,7 @@ library
     , swagger2
     , servant-swagger
     , servant-swagger-ui
+    , servant-swagger-ui-core
     , servant-swagger-ui-redoc
   default-language: Haskell2010
   ghc-options: -fshow-loaded-modules -ferror-spans
