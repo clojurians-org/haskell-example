@@ -7,9 +7,11 @@ module Lib
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Base64 (decodeLenient)
 import Codec.Compression.GZip (decompress)
-  
+
+import FFI.CKafka
+
 someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+someFunc = putStrLn rdKafkaVersionStr
 
 
 {--
