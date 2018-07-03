@@ -65,7 +65,7 @@ packages:
 
 nix:
   enable: true
-  shell-file: shell.nix
+  packages: [ pkgconfig zlib ]
 extra-include-dirs:
   - /nix/store/sgy2sz46bxc7k3hnbdjbig85bqdxhdd5-rdkafka-0.9.5/include
 extra-lib-dirs:

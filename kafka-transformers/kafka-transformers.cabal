@@ -38,7 +38,7 @@ library
     , bytestring
     , base64-bytestring
     , zlib
-  pkgconfig-depends: rdkafka
+  extra-libraries: rdkafka
   default-language: Haskell2010
   default-extensions:
       OverloadedStrings
