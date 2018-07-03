@@ -63,6 +63,10 @@ packages:
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
 
-#nix:
-#  enable: true
-#  packages: [ rdkafka, zlib ]
+nix:
+  enable: true
+  shell-file: shell.nix
+extra-include-dirs:
+  - /nix/store/sgy2sz46bxc7k3hnbdjbig85bqdxhdd5-rdkafka-0.9.5/include
+extra-lib-dirs:
+  - /nix/store/sgy2sz46bxc7k3hnbdjbig85bqdxhdd5-rdkafka-0.9.5/lib
