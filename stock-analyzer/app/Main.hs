@@ -4,12 +4,13 @@ module Main where
 
 import Debug.Trace (trace, traceShow)
 import Text.Printf (printf)
+import Data.List.Split (chunksOf)
 import Data.Either (isLeft, isRight)
 import Data.Maybe (isJust, isNothing, catMaybes, listToMaybe, mapMaybe)
 import Data.Monoid (Sum(Sum), getSum)
 import Data.Foldable (find)
 import Data.String (fromString)
-import Data.List (transpose)
+import Data.List (transpose, tails, init)
 import Control.Applicative (many, pure)
 import Control.Monad (forM)
 import Control.Monad.IO.Class (liftIO)
@@ -21,6 +22,8 @@ import Data.ByteString.Lazy (ByteString, toStrict, fromStrict, writeFile, readFi
 import Data.Text (Text, pack, unpack, isPrefixOf, dropWhileEnd)
 import Data.Text.Encoding (decodeUtf8)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
+
 import qualified Data.HashMap.Lazy as M
 import Data.HashMap.Lazy (HashMap(..), fromList, fromListWith)
 import qualified Data.Vector as V
@@ -31,16 +34,20 @@ import Data.Time (UTCTime, ZonedTime
 
 import Conduit (runConduit, runConduitRes, runConduitPure
               , yield, yieldMany, leftover
-              , mapC, mapMC, mapM_C, takeC, iterMC
+              , mapC, mapMC, mapM_C, takeC, iterMC, filterC, iterMC
               , (.|), ZipConduit(ZipConduit), getZipConduit
               , sinkList)
 import Data.Conduit (ConduitT, await, yield, awaitForever, mergeSource)
-import Data.Conduit.List (chunksOf)
 import Data.Conduit.Combinators (chunksOfE, sinkFile, foldM)
+import qualified Data.Conduit.List as CL
+
 import qualified Data.Conduit.Combinators as C
 import Data.Aeson (encode, decode, Value(Object, Array, Bool, Number, String))
 import Control.Lens ((^.), (^..), (^?), (?~), (&), at)
 import Data.Aeson.Lens (key, values, members, nth)
+
+import Text.HTML.DOM (sinkDoc)
+import Text.XML.Cursor
 import Codec.Xlsx (Xlsx, Worksheet, CellValue(CellText, CellDouble), def
                   ,fromXlsx, cellValueAt, atSheet)
 
@@ -48,10 +55,11 @@ import Data.Attoparsec.ByteString.Lazy (Parser, parse
                                      , anyWord8, string, skipWhile
                                      , maybeResult, eitherResult, endOfInput)
 import Data.Attoparsec.Combinator ( try, manyTill, lookAhead )
+
+import Network.HTTP.Simple (httpSink)
 import Network.HTTP.Conduit (httpLbs, Request(cookieJar), Response, Manager, CookieJar
                            , newManager, tlsManagerSettings
                            , parseRequest, responseCookieJar, responseBody)
-                           
 import Web.Cookie (parseSetCookie)
 import JSON (json, skipSpace)
 
@@ -196,28 +204,24 @@ parseStock cj manager header = do
     in do
       yield (Right theader) >> (mapMC parse)
 
-extractCodes :: ByteString -> [Text]
-extractCodes bs = undefined
+parseCodes :: IO [Text]
+parseCodes = do
+  let url = "http://vip.stock.finance.sina.com.cn/corp/go.php/vII_NewestComponent/indexid/000016.phtml"
+    in do
+    doc <- httpSink url $ const sinkDoc
+    let vs = (fromDocument doc) $// attributeIs "id" "NewStockTable"
+                       &// element "td"
+                       &/ element "div"
+                       &/ content
+      in
+      return $ map (T.append "SH" . head) (chunksOf 2 vs)
 
 main :: IO ()
 main = do
   manager <- newManager tlsManagerSettings
   homeResp <- httpLbs "https://xueqiu.com" manager
-  codeResp <- httpLbs "http://vip.stock.finance.sina.com.cn/corp/go.php/vII_HistoryComponent/indexid/000016.phtml" manager   
+  codes <- parseCodes
   let cj = responseCookieJar homeResp
-      -- codes = extractCodes (responseBody codeResp)
-      codes = [
-               "SH600000", "SH600016", "SH600019", "SH600028", "SH600029"
-             , "SH600030", "SH600036", "SH600048", "SH600050", "SH600104"
-             , "SH600111", "SH600276", "SH600309", "SH600340", "SH600519"
-             , "SH600547", "SH600585", "SH600606", "SH600690", "SH600703"
-             , "SH600886", "SH600958", "SH600999", "SH601006", "SH601088"
-             , "SH601166", "SH601169", "SH601186", "SH601211", "SH601229"
-             , "SH601288", "SH601318", "SH601328", "SH601336", "SH601360"
-             , "SH601390", "SH601398", "SH601601", "SH601628", "SH601668"
-             , "SH601688", "SH601766", "SH601800", "SH601818", "SH601857"
-             , "SH601878", "SH601881", "SH601988", "SH601989", "SH603993"
-             ]
     in do 
     sheet <- runConduit $ yieldMany codes
                 .| getZipConduit (ZipConduit (parseSNB manager ["名称", "价格", "市值(亿)", "市盈率", "市净率"]) *>
@@ -226,8 +230,8 @@ main = do
                                                         [("股东占比.中国证券", Exact "中国证券金融股份有限公司"),
                                                          ("股东占比.中央汇金", Exact "中央汇金资产管理有限责任公司"),
                                                          ("股东占比.全国社保基金", Start "全国社保基金")] ))
-                .| chunksOf 3
---                .| takeC 1
+                .| CL.chunksOf 3
+                -- .| takeC 3
                 .| mergeSource (yieldMany [1..])
                 .| C.foldl mkSheet def
     writeXlsx "stock-alazyer.xlsx" sheet
