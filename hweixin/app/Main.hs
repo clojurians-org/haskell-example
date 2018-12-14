@@ -3,10 +3,13 @@
 
 module Main where
 
+import Class ()
 import Types (QRcode(..)
             , HttpST(..), HttpWxInitST(..), SyncKey(..), HttpContacts(..), Contact(..)
+            , HttpMsgs(..)
             , ContactFlag(..), Sex(..)
             , WxContext(..))
+
 import CQREncode (CQRcode(CQRcode, qr_code_version, qr_code_width, qr_code_data)
                  ,qr_apiVersionString, qr_encodeString, qr_free
                  ,qr_version_auto, qr_v01
@@ -45,6 +48,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.HashMap.Lazy (HashMap)
 import qualified Data.HashMap.Lazy as M
 
+import Control.Concurrent (forkIO)
 import System.Random (randomIO, randomRIO)
 import Data.Aeson (Value(Object, String, Number), (.:), (.=), FromJSON, ToJSON, object)
 import qualified Data.Aeson as J
@@ -57,38 +61,6 @@ import Network.HTTP.Conduit (CookieJar, Cookie(cookie_name, cookie_value)
                             , RequestBody(RequestBodyLBS)
                             , responseCookieJar, responseBody, destroyCookieJar
                             , method, redirectCount)
-
-instance FromJSON Contact where
-  parseJSON (Object v) = do
-    userName <- v .: "UserName"
-    nickName <- v .: "NickName"
-    remarkName <- v .: "RemarkName"
-    sex <- v .: "Sex"
-    signature <- v .: "Signature"
-    return $ Contact userName nickName remarkName sex signature
-  parseJSON _ = empty
-  
-instance FromJSON HttpContacts where
-  parseJSON (Object v) = do
-    count <- v .: "MemberCount"
-    contacts <- v .: "MemberList"
-    return $ HttpContacts count contacts
-  parseJSON _ = empty
-
-instance FromJSON SyncKey where
-  parseJSON (Object v) = do
-    count <- v .: "Count"
-    list <- v .: "List"
-    return $ SyncKey count list
-instance ToJSON SyncKey where
-  toJSON (SyncKey count list) =
-    object [ "Count" .= count, "List" .= list ]
-  
-instance FromJSON HttpWxInitST where
-  parseJSON (Object v) = do
-    contact <- v .: "User"
-    syncKey <- v .: "SyncKey"
-    return $ HttpWxInitST contact syncKey
 
 applyOffset :: Int -> [Word8] -> [Word8]
 applyOffset n line = offset ++ line ++ offset
@@ -151,16 +123,18 @@ urlBind1 :: String -> ByteString -> Request
 urlBind1 url = fromString . printf url . BC.unpack 
 
 httpParse :: Request -> (ByteString -> a) -> IO a
-httpParse url parse = do
-  putStrLn $ "[DEBUG]" ++ show url
-  fmap (parse . responseBody) $ httpLBS url
+httpParse url parse = fmap (parse . responseBody) $ httpLBS url
 
-httpSend :: Request -> Value -> IO ByteString
-httpSend url bs = fmap responseBody . httpLBS $
-            url {method = "POST"
-                ,requestHeaders = (hContentType, "application/json; charset=utf-8") :
+httpSendParse :: Request -> Value -> (ByteString -> a) -> IO a
+httpSendParse url bs parse =
+  parse . responseBody <$> httpLBS url
+             {method = "POST"
+              ,requestHeaders = (hContentType, "application/json; charset=utf-8") :
                                   filter (\(y, _) -> y /= hContentType) (requestHeaders url)
-                ,requestBody = RequestBodyLBS (J.encode bs)}
+              ,requestBody = RequestBodyLBS (J.encode bs)}
+  
+httpSend :: Request -> Value -> IO ByteString
+httpSend url v = httpSendParse url v id
   
 httpUUID :: IO (Either String ByteString)
 httpUUID = httpParse "https://login.weixin.qq.com/jslogin?appid=wx782c26e4c19acffb" $
@@ -242,10 +216,10 @@ mkTextMsg me to content = do
                               ,("Content", String content)
                               ,("LocalID", String msgId)])
 
-httpSendWxInit :: HttpST -> IO (Maybe HttpWxInitST)
+httpSendWxInit :: HttpST -> IO (Either String HttpWxInitST)
 httpSendWxInit (HttpST cj parserST) = httpSend
   "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxinit" {cookieJar = Just cj}
-  (Object (M.fromList [("BaseRequest", parserST)])) >>= return . J.decode 
+  (Object (M.fromList [("BaseRequest", parserST)])) >>= return . J.eitherDecode
 
 -- "https://webpush.wx2.qq.com/cgi-bin/mmwebwx-bin/synccheck?r=1544712994054&skey=@crypt_77ad5b54_19633af104a711b6fead1db786fdcd19&sid=53dC2aajbSQbpeiq&uin=1936806418&deviceid=e100233450832270&synckey=1_676913366|2_676914054|3_676914026|11_676914017|201_1544712992|1000_1544690100|1001_1544689995|2001_1544682363|2007_1544531403&_=1544712941284"
 
@@ -284,15 +258,15 @@ httpSyncCheck (WxContext (HttpST cj parserST) (HttpWxInitST me syncKey0) contact
             id
 
 -- "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsync?sid=53dC2aajbSQbpeiq&skey=@crypt_77ad5b54_19633af104a711b6fead1db786fdcd19"
-httpSyncMsgs :: WxContext -> Maybe SyncKey -> IO ByteString
+httpSyncMsgs :: WxContext -> Maybe SyncKey -> IO (Either String HttpMsgs)
 httpSyncMsgs (WxContext (HttpST cj parserST) (HttpWxInitST me syncKey0) contacts)
              syncKey = do
-  body <- httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsync" {cookieJar = Just cj}
-      (Object (M.fromList [("BaseRequest", parserST),
+  httpSendParse "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsync" {cookieJar = Just cj}
+    (Object (M.fromList [("BaseRequest", parserST),
                            ("SyncKey", J.toJSON (maybe syncKey0 id syncKey)) ]))
-  return body
-
-syncMsgs :: WxContext -> Maybe SyncKey -> IO (Either String ByteString)
+    J.eitherDecode
+    
+syncMsgs :: WxContext -> Maybe SyncKey -> IO (Either String HttpMsgs)
 syncMsgs ctx syncKey = do
   resp <- httpSyncCheck ctx syncKey
   case (surround "{retcode:\"" "\"," resp, surround "selector:\"" "\"}" resp) of
@@ -301,10 +275,23 @@ syncMsgs ctx syncKey = do
       syncMsgs ctx syncKey
     (Right "0", Right "2") ->
       putStrLn "[SYS.NOTICE] YOU HAVE NEW MESSAGES! DO SYNCING..." >>
-      Right <$> httpSyncMsgs ctx syncKey
+      httpSyncMsgs ctx syncKey
     (Right "1101", _) -> putStrLn "[APP.ERROR] HTTP_REQUEST_ERROR!" >> return (Left "HTTP_REQUEST_ERROR")
     _  -> putStrLn "[SYS.ERROR] SYNC CHECK PARSE ERROR!" >>
             return (Left "SYNC_CHECK_PARSE_ERROR")
+
+syncMsgsLoop :: WxContext -> IO ()
+syncMsgsLoop ctx = go ctx Nothing 
+  where go ctx syncKey = do
+          resp <- syncMsgs ctx syncKey
+          case resp of
+            Right (HttpMsgs msgs  syncKey' syncChekKey)  ->
+              putStrLn ("[DEBUG] ===== DISPLAY MESSAGE START: ====") >>
+              forM msgs (putStrLn . show) >>
+              putStrLn ("[DEBUG] ===== DISPLAY MESSAGE END: ====") >>
+              putStrLn ("[DEBUG] NEW SYNC KEY: " ++  show syncKey') >>
+              go ctx (Just syncKey')
+            Left x  -> putStrLn x
 
 findByNickName :: Text -> [Contact] -> Maybe Contact
 findByNickName s contacts = listToMaybe . filter ((== s) . getNickName) $ contacts
@@ -330,7 +317,7 @@ fromCookies = M.fromList .
 mkContext :: IO WxContext
 mkContext = do
   httpST <- fmap (fromRight undefined) initCj
-  wxInitST <- fmap fromJust (httpSendWxInit httpST)  
+  wxInitST <- fmap (fromRight undefined) (httpSendWxInit httpST)  
   contacts <- httpContacts httpST
   return $ WxContext httpST wxInitST contacts
   
@@ -338,7 +325,7 @@ repl :: IO ()
 repl = do
   ctx <- mkContext
   
-  syncMsgs ctx Nothing >>= print
+  forkIO (syncMsgsLoop ctx) >>= print
   
   let t = httpSendMsg ctx
 
@@ -346,7 +333,6 @@ repl = do
   
   t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
 
-  -- getWxInitST ctx
 
 main :: IO ()
 main = undefined

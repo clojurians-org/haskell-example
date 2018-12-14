@@ -59,6 +59,23 @@ data WxContext = WxContext {
 , getWxContacts :: [Contact]
 } deriving (Show)
 
+data Msg = Msg {
+  getFromUserName :: Text
+, toUserName :: Text
+, getMsgType :: Int
+, getContent :: Maybe Text
+, getUrl :: Maybe Text
+, getFileName :: Maybe Text
+, getFileSize :: Maybe String
+, getRecommandInfo :: Maybe Value
+} deriving (Show)
+
+data HttpMsgs = HttpMsgs {
+  getAddMsgsList :: [Msg]
+, getMsgsSyncKey :: SyncKey
+, getMsgSyncCheckKey :: SyncKey
+} deriving (Show)
+
 data MsgType = MText | MImg | MAudio | MEmotion | MLink | MEnter | MSys | MRevert
 encodeMsgType :: MsgType -> Int
 encodeMsgType MText = 1
