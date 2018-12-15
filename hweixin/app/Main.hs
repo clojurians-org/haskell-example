@@ -22,7 +22,9 @@ import Foreign.C.String (peekCString)
 import Foreign.C.Error (throwErrnoIfNull)
 import Foreign.Storable (peek)
 
+import System.IO (hPutStrLn, hClose)
 import GHC.Generics (Generic)
+import Control.Exception (bracket)
 import Text.Printf (printf)
 import System.IO (hGetEncoding, hSetEncoding, stdout, stdin, utf8
                  ,readFile, writeFile,withFile
@@ -236,10 +238,7 @@ fromJString _ = Nothing
 
 encodeSyncKey :: SyncKey -> Text
 encodeSyncKey (SyncKey _ list)  = do
-  let mkTuple m = do
-      k <- M.lookup "Key" m
-      v <- M.lookup "Val" m
-      return (k, v)
+  let mkTuple m =  M.lookup "Key" m >>= \k -> M.lookup "Val" m >>= \v -> return (k, v)
   fromString . intercalate "|" . fmap (uncurry (printf "%d_%d")) $
     fmap (fromJust . mkTuple) list
 
@@ -314,6 +313,9 @@ fromCookies = M.fromList .
               
 -- https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxlogout?redirect=1&type=0&skey=@crypt_77ad5b54_f596b239d28dbcf50258bcaa5b442923
 
+nowTs :: IO Int
+nowTs = floor . (* 1000) <$> getPOSIXTime
+
 mkContext :: IO WxContext
 mkContext = do
   httpST <- fmap (fromRight undefined) initCj
@@ -326,17 +328,9 @@ repl = do
   ctx <- mkContext
   
   forkIO (syncMsgsLoop ctx) >>= print
-  
   let t = httpSendMsg ctx
-
-  ts <- floor . (* 1000) <$> getPOSIXTime :: IO Int
   
-  t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
-
-
+  nowTs >>= \ts -> t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
+  
 main :: IO ()
 main = undefined
-
-{--
-
---}

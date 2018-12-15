@@ -39,8 +39,9 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 # extra-deps: []
-extra-deps: [ haskell-qrencode-1.0.4 ]
-
+extra-deps:
+- libssh2-0.2.0.7@sha256:c45d71b62b2b72e2affda261ba7020800f5fecbcd0eeb40a804b84ed91c17773
+- knob-0.1.1@sha256:8dd62f0470fd829d5c4137b5ecfb0cb9a04a829fa8f436959d460019b3a6f118
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
@@ -68,4 +69,4 @@ extra-deps: [ haskell-qrencode-1.0.4 ]
 allow-newer: true
 nix:
   enable: true
-  packages: [ zlib, libqrencode ]
+  packages: [ pkgconfig, libssh2, zlib, libqrencode ]
