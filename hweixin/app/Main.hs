@@ -420,7 +420,7 @@ repl = do
   (t, f) <- mkContext
   nowTs >>= \ts -> t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
   t ("文件传输助手", ">>= hello") >>= print
-  t ("文件传输助手", ">>= sshGet larluo:LuoHao0402@localhost:/home/larluo/") >>= print
+  t ("文件传输助手", ">>= sshGet larluo:larluo@localhost:/home/larluo/") >>= print
   f ("文件传输助手", ("larluo.txt", "hello world, larluo")) >>= print
   
   
