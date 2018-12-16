@@ -76,10 +76,11 @@ data HttpMsgs = HttpMsgs {
 , getMsgSyncCheckKey :: SyncKey
 } deriving (Show)
 
-data MsgType = MText | MImg | MAudio | MEmotion | MLink | MEnter | MSys | MRevert
+data MsgType = MText | MImg | MFile | MAudio | MEmotion | MLink | MEnter | MSys | MRevert
 encodeMsgType :: MsgType -> Int
 encodeMsgType MText = 1
 encodeMsgType MImg = 3
+encodeMsgType MFile = 6
 encodeMsgType MAudio = 34
 encodeMsgType MEmotion = 47
 encodeMsgType MLink = 49

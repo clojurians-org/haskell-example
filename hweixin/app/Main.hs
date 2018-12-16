@@ -45,6 +45,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Encoding as T
 import Control.Applicative (empty, liftA2)
+import Control.Arrow ((>>>))
 import Control.Monad((>=>), forM, join, when)
 import Control.Monad.IO.Class (liftIO)
 import Data.HashMap.Lazy (HashMap)
@@ -63,6 +64,10 @@ import Network.HTTP.Conduit (CookieJar, Cookie(cookie_name, cookie_value)
                             , RequestBody(RequestBodyLBS)
                             , responseCookieJar, responseBody, destroyCookieJar
                             , method, redirectCount)
+import Network.HTTP.Client.MultipartFormData (formDataBody, formDataBodyWithBoundary
+                                             , partLBS, partFileRequestBody)
+
+import qualified Text.XML.HXT.Core as X
 
 applyOffset :: Int -> [Word8] -> [Word8]
 applyOffset n line = offset ++ line ++ offset
@@ -295,42 +300,103 @@ syncMsgsLoop ctx = go ctx Nothing
 findByNickName :: Text -> [Contact] -> Maybe Contact
 findByNickName s contacts = listToMaybe . filter ((== s) . getNickName) $ contacts
 
-httpSendMsg :: WxContext -> (Text, Text) -> IO ByteString
-httpSendMsg (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
+httpSendTextMsg :: WxContext -> (Text, Text) -> IO ByteString
+httpSendTextMsg (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
             (to, message) = do
   let nameTo = getUserName $ fromJust (findByNickName to contacts)
   mkTextMsg (getUserName me) nameTo message >>= \msg -> 
     httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg" {cookieJar = Just cj}
       (Object (M.fromList [("BaseRequest", parserST), ("Msg", msg)]))
 
-httpSendFile :: Text -> Text -> IO ()
-httpSendFile = undefined
+-- :{
+httpUploadFile :: WxContext -> (Text, (Text, ByteString)) -> IO (Either String ByteString)
+httpUploadFile (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
+               (to, (fileName, fileContent)) = do
+  let url = "https://file.wx2.qq.com/cgi-bin/mmwebwx-bin/webwxuploadmedia?f=json" {cookieJar = Just cj}
+  url' <- formDataBody
+               [partLBS "id" "WU_FILE_1"
+               ,partLBS "name" ((B.fromStrict . T.encodeUtf8) fileName)
+               ,partLBS "size" ((fromString . show . B.length) fileContent)
+               ,partLBS "mediatype" "doc"
+               ,partLBS "uploadmediarequest"
+                  ((J.encode . Object) (M.fromList [("BaseRequest", parserST)
+                                                   ,("UploadType", Number 2)
+                                                   ,("MediaType", Number 4)
+                                                   ,("FromUserName", String (getUserName me))
+                                                   ,("StartPos", Number 0)
+                                                   ,("ClientMediaId", Number 1544861291684)
+                                                   ,("TotalLen", Number 26825)
+                                                   ,("DataLen", Number 26825)
+                                                   ,("ToUserName",
+                                                     (String . getUserName . fromJust)
+                                                     (findByNickName to contacts))]))
+               ,partFileRequestBody "filename" (T.unpack fileName) (RequestBodyLBS fileContent) ]
+                url 
+  putStrLn $ "[DEBUG]" ++ show url'
+  surround "\"MediaId\": \"" "\"," . responseBody <$> httpLBS url'
+-- :}
 
-fromCookies :: CookieJar -> HashMap Text Text
-fromCookies = M.fromList .
-              fmap (liftA2 (,) (T.decodeUtf8 . cookie_name) (T.decodeUtf8 . cookie_value)) .
-              destroyCookieJar
-              
+mkFileMsg :: Text -> Text -> (Text, ByteString) -> ByteString -> IO Value
+mkFileMsg me to (fileName, fileContent) mediaId = do
+  ts <- floor . (* 1000) <$> getPOSIXTime :: IO Int
+  r4 <- randomRIO (0, 9999) :: IO Int
+  let msgId = fromString $ printf "%d%4d" ts r4
+  content <-  X.runX (X.root [] [X.mkelem "appmsg" [X.sattr "appid" "wxeb7ec651dd0aefa9"
+                                                   ,X.sattr "sdkver" ""]
+                                 [X.selem "title" [X.txt (T.unpack fileName)]
+                                 ,X.selem "desc" [X.txt ""]
+                                 ,X.selem "action" [X.txt ""]
+                                 ,X.selem "type" [X.txt "6"]
+                                 ,X.selem "content" [X.txt ""]
+                                 ,X.selem "url" [X.txt ""]
+                                 ,X.selem "lowurl" [X.txt ""]
+                                 ,X.selem "appattach"
+                                  [X.selem "totallen" [X.txt ((show . B.length) fileContent)]
+                                  ,X.selem "attachid" [X.txt (BC.unpack mediaId)]
+                                  ,X.selem "extinfo" [X.txt ""]]]]
+                      >>>  X.writeDocumentToString [X.withIndent X.no])
+  return $ Object (M.fromList [("ClientMsgId", String msgId)
+                              ,("Type", Number 6)
+                              ,("FromUserName", String me)
+                              ,("ToUserName", String to)
+                              ,("Content", String ((fromString . head) content))
+                              ,("LocalID", String msgId)])
+
+httpSendFileId :: WxContext -> (Text, (Text, ByteString)) -> ByteString -> IO ByteString
+httpSendFileId (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
+                (to, (fileName, fileContent)) mediaId= do
+  let nameTo = getUserName $ fromJust (findByNickName to contacts)
+  mkFileMsg (getUserName me) nameTo (fileName, fileContent) mediaId >>= \msg ->
+      httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendappmsg?fun=async&f=json"
+             {cookieJar = Just cj}
+        (Object (M.fromList [("BaseRequest", parserST), ("Msg", msg)]))
+
+
+httpSendFileMsg :: WxContext -> (Text, (Text, ByteString)) -> IO ByteString
+httpSendFileMsg ctx msgInfo = do
+  mediaId <- fromRight undefined <$>httpUploadFile ctx msgInfo
+  httpSendFileId ctx msgInfo mediaId
+  
 -- https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxlogout?redirect=1&type=0&skey=@crypt_77ad5b54_f596b239d28dbcf50258bcaa5b442923
 
 nowTs :: IO Int
 nowTs = floor . (* 1000) <$> getPOSIXTime
 
-mkContext :: IO WxContext
+mkContext :: IO ((Text, Text) -> IO ByteString, (Text, (Text, ByteString)) -> IO ByteString)
 mkContext = do
   httpST <- fmap (fromRight undefined) initCj
-  wxInitST <- fmap (fromRight undefined) (httpSendWxInit httpST)  
+  wxInitST <- fmap (fromRight undefined) (httpSendWxInit httpST) 
   contacts <- httpContacts httpST
-  return $ WxContext httpST wxInitST contacts
-  
+  let ctx = WxContext httpST wxInitST contacts
+  forkIO (syncMsgsLoop ctx) 
+  return (httpSendTextMsg ctx, httpSendFileMsg ctx)
+
 repl :: IO ()
 repl = do
-  ctx <- mkContext
-  
-  forkIO (syncMsgsLoop ctx) >>= print
-  let t = httpSendMsg ctx
-  
+  (t, f) <- mkContext
   nowTs >>= \ts -> t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
+  f ("文件传输助手", ("larluo.txt", "hello world, larluo")) >>= print
+  
   
 main :: IO ()
 main = undefined

@@ -61,5 +61,6 @@ executable hweixin-exe
     , unordered-containers
     , libssh2
     , knob
+    , hxt
   default-language: Haskell2010
   default-extensions: OverloadedStrings
