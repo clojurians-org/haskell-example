@@ -6,9 +6,10 @@ module Main where
 import Class ()
 import Types (QRcode(..)
             , HttpST(..), HttpWxInitST(..), SyncKey(..), HttpContacts(..), Contact(..)
-            , HttpMsgs(..)
+            , HttpMsgs(..), Msg(..)
             , ContactFlag(..), Sex(..)
             , WxContext(..))
+import Extensions (sshGet)
 
 import CQREncode (CQRcode(CQRcode, qr_code_version, qr_code_width, qr_code_data)
                  ,qr_apiVersionString, qr_encodeString, qr_free
@@ -255,7 +256,7 @@ httpSyncCheck (WxContext (HttpST cj parserST) (HttpWxInitST me syncKey0) contact
                                   flip M.lookup (maybe M.empty id . fromJObject $ st))
                                   ["Skey", "Sid", "Uin"]
   let syncKeyText = encodeSyncKey (maybe syncKey0 id syncKey)
-  putStrLn $ "syncKey:" ++ (show syncKeyText)
+  -- putStrLn $ "syncKey:" ++ (show syncKeyText)
   httpParse (setRequestQueryString (("synckey", Just (T.encodeUtf8 syncKeyText)):(fromParserST parserST))
               "https://webpush.wx2.qq.com/cgi-bin/mmwebwx-bin/synccheck")
             {cookieJar = Just cj}
@@ -284,31 +285,55 @@ syncMsgs ctx syncKey = do
     _  -> putStrLn "[SYS.ERROR] SYNC CHECK PARSE ERROR!" >>
             return (Left "SYNC_CHECK_PARSE_ERROR")
 
+stripKeyword :: Text -> Text -> Text
+stripKeyword keyword = T.strip . fromJust . T.stripPrefix keyword
+
+doAction :: WxContext -> Text -> Text -> IO ()
+doAction ctx to cmd = do
+  putStrLn $ "[DBUG] doAction: " ++ (show cmd)
+  case cmd of
+    s | T.isPrefixOf "sshGet" s -> do
+        bs <- either fromString id <$> sshGet ((B.fromStrict . T.encodeUtf8) (stripKeyword "sshGet" s))
+        httpSendTextMsg' ctx (to, (T.decodeUtf8 . B.toStrict)  bs) >>= print
+    _ -> return ()
+
 syncMsgsLoop :: WxContext -> IO ()
 syncMsgsLoop ctx = go ctx Nothing 
-  where go ctx syncKey = do
+  where go (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts) syncKey = do
           resp <- syncMsgs ctx syncKey
           case resp of
-            Right (HttpMsgs msgs  syncKey' syncChekKey)  ->
-              putStrLn ("[DEBUG] ===== DISPLAY MESSAGE START: ====") >>
-              forM msgs (putStrLn . show) >>
-              putStrLn ("[DEBUG] ===== DISPLAY MESSAGE END: ====") >>
-              putStrLn ("[DEBUG] NEW SYNC KEY: " ++  show syncKey') >>
+            Right (HttpMsgs msgs  syncKey' syncChekKey)  -> do
+              forM msgs $ \(Msg from to msgType content url filename filesize recommandInfo)
+                -> do
+                case content of
+                  Just s | T.isPrefixOf "&gt;&gt;=" s  && from == getUserName me ->
+                             doAction ctx to (stripKeyword "&gt;&gt;=" s)
+                  _ -> return ()
+                putStrLn $ printf "[%s->%s::%d] %s"
+                  (maybe "?" id (idToName from (me : contacts)))
+                  (maybe "?" id (idToName to (me : contacts)))
+                  msgType (maybe "<NIL>" id content)
+              -- putStrLn ("[DEBUG] NEW SYNC KEY: " ++  show syncKey')
               go ctx (Just syncKey')
             Left x  -> putStrLn x
 
-findByNickName :: Text -> [Contact] -> Maybe Contact
-findByNickName s contacts = listToMaybe . filter ((== s) . getNickName) $ contacts
+idToName :: Text -> [Contact] -> Maybe Text
+idToName s contacts = fmap getNickName . listToMaybe . filter ((== s) . getUserName) $ contacts
 
-httpSendTextMsg :: WxContext -> (Text, Text) -> IO ByteString
-httpSendTextMsg (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
+nameToId :: Text -> [Contact] -> Maybe Text
+nameToId s contacts = fmap getUserName . listToMaybe . filter ((== s) . getNickName) $ contacts
+
+httpSendTextMsg' :: WxContext -> (Text, Text) -> IO ByteString
+httpSendTextMsg' (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
             (to, message) = do
-  let nameTo = getUserName $ fromJust (findByNickName to contacts)
-  mkTextMsg (getUserName me) nameTo message >>= \msg -> 
+  mkTextMsg (getUserName me) to message >>= \msg -> 
     httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg" {cookieJar = Just cj}
       (Object (M.fromList [("BaseRequest", parserST), ("Msg", msg)]))
 
--- :{
+httpSendTextMsg :: WxContext -> (Text, Text) -> IO ByteString
+httpSendTextMsg ctx (to, message) =
+  httpSendTextMsg' ctx (fromJust (nameToId to (getWxContacts ctx)), message)
+
 httpUploadFile :: WxContext -> (Text, (Text, ByteString)) -> IO (Either String ByteString)
 httpUploadFile (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
                (to, (fileName, fileContent)) = do
@@ -328,13 +353,12 @@ httpUploadFile (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
                                                    ,("TotalLen", Number 26825)
                                                    ,("DataLen", Number 26825)
                                                    ,("ToUserName",
-                                                     (String . getUserName . fromJust)
-                                                     (findByNickName to contacts))]))
+                                                     (String . fromJust)
+                                                     (nameToId to contacts))]))
                ,partFileRequestBody "filename" (T.unpack fileName) (RequestBodyLBS fileContent) ]
                 url 
   putStrLn $ "[DEBUG]" ++ show url'
   surround "\"MediaId\": \"" "\"," . responseBody <$> httpLBS url'
--- :}
 
 mkFileMsg :: Text -> Text -> (Text, ByteString) -> ByteString -> IO Value
 mkFileMsg me to (fileName, fileContent) mediaId = do
@@ -365,7 +389,7 @@ mkFileMsg me to (fileName, fileContent) mediaId = do
 httpSendFileId :: WxContext -> (Text, (Text, ByteString)) -> ByteString -> IO ByteString
 httpSendFileId (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
                 (to, (fileName, fileContent)) mediaId= do
-  let nameTo = getUserName $ fromJust (findByNickName to contacts)
+  let nameTo = fromJust (nameToId to contacts)
   mkFileMsg (getUserName me) nameTo (fileName, fileContent) mediaId >>= \msg ->
       httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendappmsg?fun=async&f=json"
              {cookieJar = Just cj}
@@ -395,6 +419,8 @@ repl :: IO ()
 repl = do
   (t, f) <- mkContext
   nowTs >>= \ts -> t ("文件传输助手", fromString ("HASKELL >>= 当前时间截:" ++  show ts) ) >>= print
+  t ("文件传输助手", ">>= hello") >>= print
+  t ("文件传输助手", ">>= sshGet larluo:LuoHao0402@localhost:/home/larluo/") >>= print
   f ("文件传输助手", ("larluo.txt", "hello world, larluo")) >>= print
   
   
