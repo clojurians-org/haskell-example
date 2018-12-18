@@ -9,8 +9,8 @@ import Types (QRcode(..)
             , HttpMsgs(..), Msg(..)
             , ContactFlag(..), Sex(..)
             , WxContext(..))
-import Extensions (sshGet)
 
+import Extensions (sshGet)
 import CQREncode (CQRcode(CQRcode, qr_code_version, qr_code_width, qr_code_data)
                  ,qr_apiVersionString, qr_encodeString, qr_free
                  ,qr_version_auto, qr_v01
@@ -292,8 +292,15 @@ doAction :: WxContext -> Text -> Text -> IO ()
 doAction ctx to cmd = do
   putStrLn $ "[DBUG] doAction: " ++ (show cmd)
   case cmd of
+    s | T.isPrefixOf "sshGet::File" s -> do
+        (fileName, bs) <- either ((,) (Just "ERROR.txt"). fromString) id <$>
+            sshGet ((B.fromStrict . T.encodeUtf8) (stripKeyword "sshGet::File" s))
+        let fileName' = (maybe "result.txt" id . fmap fromString) fileName
+        httpSendFileMsg' ctx (to, (fileName', bs)) >>= print
+  
     s | T.isPrefixOf "sshGet" s -> do
-        bs <- either fromString id <$> sshGet ((B.fromStrict . T.encodeUtf8) (stripKeyword "sshGet" s))
+        (fileName, bs) <- either ((,) (Just "ERROR.txt"). fromString) id <$>
+            sshGet ((B.fromStrict . T.encodeUtf8) (stripKeyword "sshGet" s))
         httpSendTextMsg' ctx (to, (T.decodeUtf8 . B.toStrict)  bs) >>= print
     _ -> return ()
 
@@ -352,9 +359,7 @@ httpUploadFile (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
                                                    ,("ClientMediaId", Number 1544861291684)
                                                    ,("TotalLen", Number 26825)
                                                    ,("DataLen", Number 26825)
-                                                   ,("ToUserName",
-                                                     (String . fromJust)
-                                                     (nameToId to contacts))]))
+                                                   ,("ToUserName", (String to))]))
                ,partFileRequestBody "filename" (T.unpack fileName) (RequestBodyLBS fileContent) ]
                 url 
   putStrLn $ "[DEBUG]" ++ show url'
@@ -389,17 +394,19 @@ mkFileMsg me to (fileName, fileContent) mediaId = do
 httpSendFileId :: WxContext -> (Text, (Text, ByteString)) -> ByteString -> IO ByteString
 httpSendFileId (WxContext (HttpST cj parserST) (HttpWxInitST me _) contacts)
                 (to, (fileName, fileContent)) mediaId= do
-  let nameTo = fromJust (nameToId to contacts)
-  mkFileMsg (getUserName me) nameTo (fileName, fileContent) mediaId >>= \msg ->
+  mkFileMsg (getUserName me) to (fileName, fileContent) mediaId >>= \msg ->
       httpSend "https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxsendappmsg?fun=async&f=json"
              {cookieJar = Just cj}
         (Object (M.fromList [("BaseRequest", parserST), ("Msg", msg)]))
 
 
-httpSendFileMsg :: WxContext -> (Text, (Text, ByteString)) -> IO ByteString
-httpSendFileMsg ctx msgInfo = do
+httpSendFileMsg' :: WxContext -> (Text, (Text, ByteString)) -> IO ByteString
+httpSendFileMsg' ctx msgInfo = do
   mediaId <- fromRight undefined <$>httpUploadFile ctx msgInfo
   httpSendFileId ctx msgInfo mediaId
+
+httpSendFileMsg :: WxContext -> (Text, (Text, ByteString)) -> IO ByteString
+httpSendFileMsg ctx (to, fInfo) = httpSendFileMsg' ctx (fromJust (nameToId to (getWxContacts ctx)), fInfo)
   
 -- https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxlogout?redirect=1&type=0&skey=@crypt_77ad5b54_f596b239d28dbcf50258bcaa5b442923
 

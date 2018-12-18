@@ -23,14 +23,17 @@ import Data.Attoparsec.ByteString.Lazy (Parser)
 import qualified Data.Attoparsec.ByteString.Lazy as P
 import qualified Data.Attoparsec.Combinator as P
 
-sshListFile :: String -> String -> String -> FilePath -> IO ByteString
+import Data.List (init)
+import System.FilePath.Posix (takeBaseName, takeFileName)
+
+sshListFile :: String -> String -> String -> FilePath -> IO (Maybe FilePath, ByteString)
 sshListFile username password ip filepath = do
-  putStrLn "sshListFile..."
+  putStrLn ("sshListFile:" ++ filepath)
   home <- getEnv "HOME"
   withSFTPUser (home ++ "/.ssh/known_hosts") username password ip 22 $ \sftp ->
-    BC.pack . show . fmap fst <$> sftpListDir sftp "/home/larluo"
+    (,) (Just (((++ ".txt"). takeFileName . init) filepath)) . BC.pack . show . fmap fst <$> sftpListDir sftp filepath
 
-sshReadFile :: String -> String -> String -> FilePath -> IO ByteString
+sshReadFile :: String -> String -> String -> FilePath -> IO (Maybe FilePath, ByteString)
 sshReadFile username password ip filepath = do
   home <- getEnv "HOME"
   withSFTPUser (home ++ "/.ssh/known_hosts") username password ip 22 $ \sftp ->
@@ -39,7 +42,7 @@ sshReadFile username password ip filepath = do
      knob <- K.newKnob ""
      K.withFileHandle knob "[knob]" WriteMode $ \h -> do
        sftpReadFileToHandler sftph h fsize
-     B.fromStrict <$> K.getContents knob
+     (,) (Just (takeFileName filepath)) . B.fromStrict <$> K.getContents knob
 
 urlP :: Parser (String, String, String, String)
 urlP = do
@@ -49,7 +52,7 @@ urlP = do
   filepath <- BC.unpack . B.pack <$> P.many1 P.anyWord8
   return (username, password, ip, filepath)
   
-sshGet :: ByteString -> IO (Either String ByteString)
+sshGet :: ByteString -> IO (Either String (Maybe FilePath, ByteString))
 sshGet url = do
   handle (\(SomeException e) -> (return . Left) ("sshGet_EXCEPTION: " ++ show e)) $
     case P.eitherResult (P.parse urlP url) of
@@ -61,7 +64,7 @@ sshGet url = do
 
 repl :: IO ()
 repl = do
-  sshGet "larluo:LuoHao0402@localhost:/home/larluo/test.txt" >>= print
+  sshGet "op:op@10.132.37.200:/home/op/" >>= print
   sshGet "larluo:LuoHao0402@localhost:/home/larluo/" >>= print
   handle (\(SomeException _) -> putStrLn "Error calculating result") (print (5 `div` 0))
   undefined

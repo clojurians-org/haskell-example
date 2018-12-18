@@ -51,6 +51,8 @@ executable hweixin-exe
     , hweixin
     , bytestring
     , text
+    , split
+    , filepath
     , time
     , random
     , attoparsec
