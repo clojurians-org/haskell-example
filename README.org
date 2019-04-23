@@ -1,0 +1,176 @@
+#+STARTUP: showall
+* HASKELL 最佳实践
+
+本人在使用过程中，会整理出haskell的学习资料，以便大家更好的学习。
+欢迎大家fork并提交PR!
+
+** HASKELL :> 开发工具
+  nix + cabal + emacs dante
+
+** HASKELL :> 全栈开发
+  - C FFI
+  #+BEGIN_QUOTE
+    ghc标准库
+  #+END_QUOTE
+  - JS FFI
+  #+BEGIN_QUOTE
+    ghcjs标准库
+  #+END_QUOTE
+  - JVM FFI
+  #+BEGIN_QUOTE
+    eta-lang开发
+  #+END_QUOTE
+
+** HASKELL :> 知名工具
+  - pandoc 
+  #+BEGIN_QUOTE
+    进行任意文档格式转换
+  #+END_QUOTE
+  - postgREST
+  #+BEGIN_QUOTE
+    非常厉害的postgresql restful api服务
+  #+END_QUOTE
+  - cardano
+  #+BEGIN_QUOTE
+    haskell实现的区块链项目
+  #+END_QUOTE
+  - hnix
+  #+BEGIN_QUOTE
+    nix的haskell实现版本，方便用于测试集成
+  #+END_QUOTE
+  - dhall
+  #+BEGIN_QUOTE
+    haskell实现的配置编程语言
+  #+END_QUOTE
+
+** HASKELL :> 数据格式解析
+  - JSON =: aeson
+  #+BEGIN_QUOTE
+    当前不支持非严格json解析，例如单引号或者key不含引号，可以改写低层库很方便实现
+  #+END_QUOTE
+  - YAML =: yaml
+  #+BEGIN_QUOTE
+    可以很容易与aeson集成
+  #+END_QUOTE
+  - CSV =: cassava
+  - EXCEL =: xlsx
+  #+BEGIN_QUOTE
+    性能强悍，大量使用lens操作
+  #+END_QUOTE
+
+** HASKELL :> 通用格式解析器
+  - parsec 
+  #+BEGIN_QUOTE
+    GHC核心自带解析器，性能较弱
+  #+END_QUOTE
+  - attoparsec
+  #+BEGIN_QUOTE
+    网络字节解析器，性能强悍，错误提示较差
+  #+END_QUOTE
+  - megaparsec
+  #+BEGIN_QUOTE
+    parsec的性能增强版本
+  #+END_QUOTE
+
+** HASKELL :> 前端开发
+  - reflex 及 reflex-dom
+  #+BEGIN_QUOTE
+    FRP核心库
+  #+END_QUOTE
+  - reflex-semantic
+  #+BEGIN_QUOTE
+    reflex UI库
+  #+END_QUOTE
+  - obelisk
+  #+BEGIN_QUOTE
+    reflex构建工具与开发框架
+  #+END_QUOTE
+
+** HASKELL :> WEB开发框架
+  - servant-server
+  #+BEGIN_QUOTE
+    restful服务开发
+  #+END_QUOTE
+  - servant-auth
+  #+BEGIN_QUOTE
+    JWT及cookie验证
+  #+END_QUOTE
+  - servant-client
+  #+BEGIN_QUOTE
+    生成后端api调用代码
+  #+END_QUOTE
+  - servant-reflex
+  #+BEGIN_QUOTE
+    生成reflex前端api调用代码
+  #+END_QUOTE
+  - servant-swagger
+  #+BEGIN_QUOTE
+    servant swagger文档库
+  #+END_QUOTE
+
+** HASKELL :> 数据库访问库
+  - postgresql =: postgresql-simple
+  - mysql =: mysql-simple
+  - SQL Server =: tds
+  - oracle =: odpic-raw
+  #+BEGIN_QUOTE
+    oracle使用最简单的库
+  #+END_QUOTE
+  - ORM & DSL =: persistent+Esqueleto
+
+** HASKELL :> 数据处理框架
+  - conduit 
+  #+BEGIN_QUOTE
+    单机史上最强实时处理技术
+  #+END_QUOTE
+  - hw-kafka-conduit
+  #+BEGIN_QUOTE
+    conduit在kafka平台上运行
+  #+END_QUOTE
+
+** HASKELL :> 大数据处理技术
+  - sparkle [https://github.com/tweag/sparkle]
+  - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
+
+** HASKELL :> 高并行并发框架
+  - parallel 并行库
+  #+BEGIN_QUOTE
+    快捷版本并行库
+  #+END_QUOTE
+  - monad-par 并行库
+  #+BEGIN_QUOTE
+    灵活定制版本并行库
+  #+END_QUOTE
+  - STM 
+  #+BEGIN_QUOTE
+    系统自带并发库
+  #+END_QUOTE
+  - distribute-process
+  #+BEGIN_QUOTE
+    分布式并发库
+  #+END_QUOTE
+
+** HASKELL :> 网络传输工具
+  + SSH
+  #+BEGIN_QUOTE
+    libssh2
+  #+END_QUOTE
+  + HTTP/HTTPS
+    - http-client
+    - http-client-tls
+
+** HASKELL :> 运行时动态加载
+  - hint
+  #+BEGIN_QUOTE
+    动态运行时加载
+  #+END_QUOTE
+
+** HASKELL :> 脚本工具
+  - Haskell-Turtle-Library
+  #+BEGIN_QUOTE
+    简洁版脚本工具
+  #+END_QUOTE
+  - Shelly
+  #+BEGIN_QUOTE
+    灵活版脚本工具
+  #+END_QUOTE
