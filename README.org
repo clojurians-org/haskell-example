@@ -127,6 +127,10 @@
   #+BEGIN_QUOTE
     conduit在kafka平台上运行
   #+END_QUOTE
+  - lens
+  #+BEGIN_QUOTE
+    多层级数据遍历组合处理库
+  #+END_QUOTE  
 
 ** HASKELL :> 大数据处理技术
   - sparkle [https://github.com/tweag/sparkle]
@@ -151,9 +155,7 @@
   #+END_QUOTE
 
 ** HASKELL :> 网络传输工具
-  + SSH
-  #+BEGIN_QUOTE
-    libssh2
+  + SSH =: libssh2
   #+END_QUOTE
   + HTTP/HTTPS
     - http-client
