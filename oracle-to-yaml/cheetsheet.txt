@@ -1,2 +1,2 @@
 nix-shell -p cabal-install
-cabal new-repl --extra-lib-dirs=$(nix-build '<nixpkgs>' -A odpic)/lib
+cabal configure --extra-lib-dirs=$(nix-build '<nixpkgs>' -A odpic)/lib
