@@ -34,6 +34,10 @@
   #+BEGIN_QUOTE
     haskell实现的区块链项目
   #+END_QUOTE
+  - queryparser
+  #+BEGIN_QUOTE
+    数据仓库血缘分析工具, 支持vertica|HIVE|presto
+  #+END_QUOTE
   - hnix
   #+BEGIN_QUOTE
     nix的haskell实现版本，方便用于测试集成
@@ -42,6 +46,11 @@
   #+BEGIN_QUOTE
     haskell实现的配置编程语言
   #+END_QUOTE
+  - haskell-webshell
+  #+BEGIN_QUOTE
+    通用网页实现的shell终端
+  #+END_QUOTE
+
 
 ** HASKELL :> 数据格式解析
   - JSON =: aeson
@@ -176,3 +185,8 @@
   #+BEGIN_QUOTE
     灵活版脚本工具
   #+END_QUOTE
+  
+** HASKELL :>  常用库[等整理]
+  - utf8-string
+  - resourcet
+  - rio
