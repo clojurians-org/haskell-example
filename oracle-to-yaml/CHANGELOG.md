@@ -1,4 +1,4 @@
-# Revision history for db-to-yaml
+# Revision history for oracle-to-yaml
 
 ## 0.1.0.0 -- YYYY-mm-dd
 
