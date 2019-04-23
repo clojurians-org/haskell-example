@@ -23,6 +23,7 @@ executable oracle-to-yaml
   -- other-extensions:
   build-depends:       
       base
+    , monad-loops
     , odpic-raw
   extra-libraries: odpic
   -- extra-lib-dirs: /nix/store/mn9zp245lp6mlg87rbiaywva2c73gwvh-odpic-3.1.0
