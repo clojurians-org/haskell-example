@@ -4,6 +4,40 @@
 本人在使用过程中，会整理出haskell的学习资料，以便大家更好的学习。
 欢迎大家fork并提交PR!
 
+** HASKELL :> 电子书
+  - [新手入门-兴趣] Learn You a Haskell for Great Good! A Beginner's Guide 
+  #+BEGIN_QUOTE
+    此书过于基础，适合函数式概念入门，不具备工程开发能力，适合haskell零基础爱好者兴趣培养
+  #+END_QUOTE
+  - [新手入门-进阶] Haskell Programming from first principle
+  #+BEGIN_QUOTE
+    此书把简单的东西讲得太细致，能提供较好的haskell基础知识, 适合haskell专业开发者入门指引
+  #+END_QUOTE
+  - [基础开发] Real World Haskell [http://book.realworldhaskell.org/read/]
+  #+BEGIN_QUOTE
+    此书具备一定难度，且知识面较为全面，适合具有haskell基础的人员深入理解学习
+  #+END_QUOTE
+  - [专业技能] parallel and concurrency programming in haskell
+  #+BEGIN_QUOTE
+    此书由haskell核心库高并发专家编写，知识体系非常完整，讲解得深入浅出
+  #+END_QUOTE
+
+** HASKELL :>  技术文章
+  + Monad基础知识:
+    - 博客: https://www.jianshu.com/p/e0f710b3cd4c
+  + CSP技术
+    - 库源码学习: https://www.jianshu.com/p/694e95dc390c
+  + Template Haskell
+    - 博客: https://markkarpov.com/tutorial/th.html
+    - 博客: https://wiki.haskell.org/Template_Haskell
+    - 库源码学习: [persistent, aeson, lens]
+  + 实时流技术Conduit
+    - 源码分析: https://www.jianshu.com/p/65e75b0edbaa
+  + 复合解析技术parsec
+    - 源码分析: https://www.jianshu.com/p/595983904a57
+  + 高并发STM
+    - 源码分析: https://www.jianshu.com/p/cd2514ee27bc
+
 ** HASKELL :> 开发工具
   nix + cabal + emacs dante
 
@@ -132,16 +166,16 @@
   #+BEGIN_QUOTE
     单机史上最强实时处理技术
   #+END_QUOTE
-  - hw-kafka-conduit
-  #+BEGIN_QUOTE
-    conduit在kafka平台上运行
-  #+END_QUOTE
   - lens
   #+BEGIN_QUOTE
     多层级数据遍历组合处理库
   #+END_QUOTE  
 
 ** HASKELL :> 大数据处理技术
+  - hw-kafka-conduit
+  #+BEGIN_QUOTE
+    conduit在kafka平台上运行
+  #+END_QUOTE
   - sparkle [https://github.com/tweag/sparkle]
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
 
@@ -186,7 +220,7 @@
     灵活版脚本工具
   #+END_QUOTE
   
-** HASKELL :>  常用库[等整理]
+** HASKELL :>  其它常用库[等整理]
   - utf8-string
   - resourcet
   - rio
