@@ -37,6 +37,9 @@
     - 源码分析: https://www.jianshu.com/p/595983904a57
   + 高并发STM
     - 源码分析: https://www.jianshu.com/p/cd2514ee27bc
+  + 全栈开发[servant+reflex]
+    - https://jappieklooster.nl/fullstack-haskell-reflex-and-servant.html
+    - https://jappieklooster.nl/authentication-in-reflex-servant.html
 
 ** HASKELL :> 开发工具
   nix + cabal + emacs dante
