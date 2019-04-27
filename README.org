@@ -23,14 +23,21 @@
   #+END_QUOTE
 
 ** HASKELL :>  技术文章
-  + Monad基础知识:
+  + Monad连接器:
     - 博客: https://www.jianshu.com/p/e0f710b3cd4c
   + CSP技术
     - 库源码学习: https://www.jianshu.com/p/694e95dc390c
+  + TypeClass :
+    - 视频: https://www.bilibili.com/video/av40042989
+  + 类型系统:
+    - 博客[未完成]：https://www.jianshu.com/p/ae3ed9c4870b
   + Template Haskell
     - 博客: https://markkarpov.com/tutorial/th.html
     - 博客: https://wiki.haskell.org/Template_Haskell
     - 库源码学习: [persistent, aeson, lens]
+  + FRP技术
+    - 理论: https://blog.qfpl.io/projects/reflex/
+    - 实战: https://github.com/hansroland/reflex-dom-inbits/blob/master/tutorial.md
   + 实时流技术Conduit
     - 源码分析: https://www.jianshu.com/p/65e75b0edbaa
   + 复合解析技术parsec
