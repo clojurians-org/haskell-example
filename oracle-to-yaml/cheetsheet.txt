@@ -1,3 +1,4 @@
+export NIX_PATH="nixpkgs=/home/larluo/.nix-defexpr/channels/nixpkgs-unstable"
 nix-shell -p cabal-install
-nix-shell --run "cabal configure --extra-lib-dirs=$(nix-build '<nixpkgs>' -A odpic)/lib"
-nix-shell --run "cabal repl"
+nix-shell --run "cabal new-configure --extra-lib-dirs=$(nix-build '<nixpkgs>' -A odpic)/lib"
+nix-shell --run "cabal new-repl"

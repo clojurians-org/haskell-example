@@ -11,7 +11,7 @@ let
     root = ./.;
 
     modifier = drv: haskell.lib.overrideCabal drv (attrs: {
-      buildTools = (attrs.buildTools or []) ++ [haskellPackages.cabal-install] ;
+      buildTools = (attrs.buildTools or []) ++ [haskellPackages.cabal-install haskellPackages.c2hs] ;
       librarySystemDepends = [ odpic ] ;
     }) ;
 

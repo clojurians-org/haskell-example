@@ -19,15 +19,25 @@ extra-source-files:  CHANGELOG.md
 
 executable oracle-to-yaml
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:
+      Main
+      Database.Dpi.Internal
+      Database.Dpi.Prelude
+      Database.Dpi.Util
+      Database.Dpi.Field
+      Database.Dpi
   -- other-extensions:
+  build-tools:
+      c2hs
   build-depends:       
       base
     , bytestring
     , text
     , aeson
+    , time
     , monad-loops
-    , odpic-raw
+    , scientific
+    , transformers
   extra-libraries: odpic
   -- extra-lib-dirs: /nix/store/mn9zp245lp6mlg87rbiaywva2c73gwvh-odpic-3.1.0
   hs-source-dirs:      src
