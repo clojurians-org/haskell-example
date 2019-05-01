@@ -1,0 +1,14 @@
+nix-shell --run "cabal update"
+nix-shell --run "cabal init"
+nix-shell --run "cabal new-repl"
+
+curl -u "Authorization: Basic $(printf "elastic:**" | base64 -w0)" es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com:9200
+curl -u "elastic:**" -XPUT es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com:9200/larluo
+curl -u "elastic:**" es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com:9200/_cat/indices?v
+
+curl -XDELETE -u "**" es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com:9200/larluo
+
+
+seq 0 9 | awk '{print ($1 * 50 * 10000 + 1), (($1+1) * 50 * 10000) }' | xargs -I {} -P 10 bash -c "./result/bin/hbenchmark es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com larluo {}"
+seq 0 49 | awk '{print ($1 * 10 * 10000 + 1), (($1+1) * 10 * 10000) }' | xargs -I {} -P 50 bash -c "./result/bin/hbenchmark es-cn-v0h13byd3000pi3kh.public.elasticsearch.aliyuncs.com larluo {}"
+

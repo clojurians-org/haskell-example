@@ -3,7 +3,7 @@ cabal-version:       >=1.10
 -- init'.  For further documentation, see
 -- http://haskell.org/cabal/users-guide/
 
-name:                hbenchmark
+name:                es-benchmark
 version:             0.1.0.0
 -- synopsis:
 -- description:
@@ -17,7 +17,7 @@ maintainer:          larluo@clojurians.org
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
-executable hbenchmark
+executable es-benchmark
   main-is:             Main.hs
   -- other-modules:
   -- other-extensions:
