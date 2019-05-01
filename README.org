@@ -66,23 +66,30 @@
   #+END_QUOTE
 
 ** HASKELL :> 知名工具
-  - pandoc 
+  - pandoc [https://github.com/jgm/pandoc]
   #+BEGIN_QUOTE
     进行任意文档格式转换
   #+END_QUOTE
-  - postgREST
+  - gitit [https://github.com/jgm/gitit]
+  #+BEGIN_QUOTE
+    轻松一键安装，零依赖: nix-env -f '<nixpkgs>' -iA haskellPackages.gitit  
+  #+END_QUOTE
+  - Haxl [https://github.com/facebook/Haxl]
+  #+BEGIN_QUOTE
+    facebook出品，用于大规模反垃圾邮件策略
+  #+END_QUOTE
+  - queryparser [https://github.com/uber/queryparser]
+  #+BEGIN_QUOTE
+    uber出品, 数据仓库血缘分析工具, 支持vertica|HIVE|presto
+  #+END_QUOTE
+  - postgREST 
   #+BEGIN_QUOTE
     非常厉害的postgresql restful api服务
   #+END_QUOTE
   - cardano
   #+BEGIN_QUOTE
     haskell实现的区块链项目
-  #+END_QUOTE
-  - queryparser
-  #+BEGIN_QUOTE
-    数据仓库血缘分析工具, 支持vertica|HIVE|presto
-  #+END_QUOTE
-  - hnix
+  #+END_QUOTE  - hnix
   #+BEGIN_QUOTE
     nix的haskell实现版本，方便用于测试集成
   #+END_QUOTE
@@ -94,7 +101,10 @@
   #+BEGIN_QUOTE
     通用网页实现的shell终端
   #+END_QUOTE
-
+  - graphql-engine/server [https://github.com/hasura/graphql-engine/tree/master/server]
+  #+BEGIN_QUOTE
+    GraphQL on postgresql横空出世  
+  #+END_QUOTE
 
 ** HASKELL :> 数据格式解析
   - JSON =: aeson
@@ -171,6 +181,14 @@
   #+END_QUOTE
   - ORM & DSL =: persistent+Esqueleto
 
+** HASKELL :> 字节编码库
+  - base64-bytestring
+  - utf8-bytestring
+  - cryptonite
+  #+BEGIN_QUOTE
+    haskell业界标准加密库
+  #+END_QUOTE
+
 ** HASKELL :> 数据处理框架
   - conduit 
   #+BEGIN_QUOTE
@@ -231,6 +249,5 @@
   #+END_QUOTE
   
 ** HASKELL :>  其它常用库[等整理]
-  - utf8-string
   - resourcet
   - rio
