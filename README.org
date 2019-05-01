@@ -49,7 +49,10 @@
     - https://jappieklooster.nl/authentication-in-reflex-servant.html
 
 ** HASKELL :> 开发工具
-  nix + cabal + emacs dante
+  emacs dante :> [nix + cabal] <> [obelisk]
+  - emacs dante [https://github.com/jyp/dante]
+  - nix + cabal 配置 [https://github.com/Gabriel439/haskell-nix]
+  - obelisk [https://github.com/obsidiansystems/obelisk]
 
 ** HASKELL :> 全栈开发
   - C FFI [https://github.com/ghc/ghc]
