@@ -52,17 +52,21 @@
   nix + cabal + emacs dante
 
 ** HASKELL :> 全栈开发
-  - C FFI
+  - C FFI [https://github.com/ghc/ghc]
   #+BEGIN_QUOTE
-    ghc标准库
+    ghc: 原生大本营, 非常好玩
   #+END_QUOTE
-  - JS FFI
+  - JS FFI [https://github.com/ghcjs/ghcjs]
   #+BEGIN_QUOTE
-    ghcjs标准库
+    ghcjs: 有着强大的FRP支撑, 以reflex最为知名, 大部分项目需要配合nix使用
   #+END_QUOTE
-  - JVM FFI
+  - JVM FFI [https://github.com/eta-lang]
   #+BEGIN_QUOTE
-    eta-lang开发
+    eta-lang: 
+    当前不支持GHC 8, 使用NIX会比较麻烦; 
+    对于Maybe类型的nullable object尚不支持; 
+    使用过程中须使用progurad减少文件size，编译过程较慢; 
+    HDBC及其底层的数据库尚未完全支持，使用友好度不够
   #+END_QUOTE
 
 ** HASKELL :> 知名工具
@@ -82,28 +86,29 @@
   #+BEGIN_QUOTE
     uber出品, 数据仓库血缘分析工具, 支持vertica|HIVE|presto
   #+END_QUOTE
-  - postgREST 
+  - postgREST [https://github.com/PostgREST/postgrest]
   #+BEGIN_QUOTE
     非常厉害的postgresql restful api服务
   #+END_QUOTE
-  - cardano
-  #+BEGIN_QUOTE
-    haskell实现的区块链项目
-  #+END_QUOTE  - hnix
+  - hnix [https://github.com/haskell-nix/hnix]
   #+BEGIN_QUOTE
     nix的haskell实现版本，方便用于测试集成
-  #+END_QUOTE
-  - dhall
-  #+BEGIN_QUOTE
-    haskell实现的配置编程语言
-  #+END_QUOTE
-  - haskell-webshell
-  #+BEGIN_QUOTE
-    通用网页实现的shell终端
   #+END_QUOTE
   - graphql-engine/server [https://github.com/hasura/graphql-engine/tree/master/server]
   #+BEGIN_QUOTE
     GraphQL on postgresql横空出世  
+  #+END_QUOTE
+  - cardano [https://github.com/input-output-hk/cardano-sl]
+  #+BEGIN_QUOTE
+    haskell实现的区块链项目
+  #+END_QUOTE  
+  - dhall [https://github.com/dhall-lang/dhall-haskell]
+  #+BEGIN_QUOTE
+    haskell实现的配置编程语言
+  #+END_QUOTE
+  - haskell-webshell [https://github.com/lehins/haskell-webshell]
+  #+BEGIN_QUOTE
+    通用网页实现的shell终端
   #+END_QUOTE
 
 ** HASKELL :> 数据格式解析
@@ -250,4 +255,6 @@
   
 ** HASKELL :>  其它常用库[等整理]
   - resourcet
+  - mono-traversable
   - rio
+

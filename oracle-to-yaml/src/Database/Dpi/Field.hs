@@ -34,6 +34,14 @@ import           Data.Scientific
 import           Data.Time
 import           Data.Time.Clock.POSIX
 
+import Data.Maybe (isJust)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.State.Lazy (execStateT, modify)
+import Control.Monad.Loops (iterateUntilM)
+import Foreign.Marshal.Alloc (allocaBytes)
+import Data.ByteString (append)
+import Data.ByteString.Char8 (packCStringLen)
+
 -- | Database Raw Data with Type Info
 data DataField = DataField
   { info  :: !Data_QueryInfo -- ^ Type Info
@@ -65,6 +73,23 @@ readDataField dfm name = case lookup name dfm of
   Nothing -> return Nothing
   Just v  -> fromDataField v
 
+-- libLobGetBufferSize > libLobReadBytes
+mkBSFromLob :: Ptr DPI_Lob -> IO ByteString
+mkBSFromLob lob = do
+  let batchSize = fromIntegral 8192
+  bufSize <- alloca $ \size -> libLobGetBufferSize lob batchSize size >> peek size
+  flip execStateT B.empty $
+    flip (iterateUntilM isJust) (Just 0) $ \(Just offset) -> do
+      (bs, readSize) <- liftIO $ allocaBytes (fromIntegral bufSize) $ \buf ->
+        alloca $ \readSizePtr -> do
+          libLobReadBytes lob offset batchSize buf readSizePtr
+          readSize <- peek readSizePtr
+          bs <- packCStringLen (buf, fromIntegral readSize)
+          return (bs, readSize)
+      modify (`append` bs)
+      let offset' = if (readSize == 0) then Nothing else Just (readSize + offset)
+      return offset'
+      
 instance FromDataField ByteString where
   fromDataField DataField{..} = let Data_QueryInfo{..} = info in go name typeInfo value
     where
@@ -76,6 +101,10 @@ instance FromDataField ByteString where
       go _ _ (DataRaw           v) = Just <$> toByteString v
       go _ _ (DataVarchar       v) = Just <$> toByteString v
       go _ _ (DataNChar         v) = Just <$> toByteString v
+      go _ _ (DataBFile v)         = Just <$> mkBSFromLob v
+      go _ _ (DataBlob v)          = Just <$> mkBSFromLob v
+      go _ _ (DataClob v)          = Just <$> mkBSFromLob v
+      go _ _ (DataNClob v)         = Just <$> mkBSFromLob v
       go n _ _                     = singleError' n
 
 instance FromDataField Integer where
