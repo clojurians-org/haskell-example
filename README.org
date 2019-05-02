@@ -241,6 +241,10 @@
   #+BEGIN_QUOTE
     多层级数据遍历组合处理库
   #+END_QUOTE
+  - fgl [https://github.com/haskell/fgl]
+  #+BEGIN_QUOTE
+    图算法库
+  #+END_QUOTE
   - QuickCheck
   #+BEGIN_QUOTE                                                                                                                                                           
     使用Generator自动造数，非常好用
@@ -326,10 +330,12 @@
 
 ** HASKELL :> 系统工具库
   - time
+  - random
   - Glob
   - filepath
   - directory
   - monad-logger
+  - configurator [https://github.com/bos/configurator]
 
 ** HASKELL :> 测试工具
   - benchmark
@@ -356,3 +362,4 @@
   - dependent-map
   - dependent-sum
   - rio
+  - string-conversions
