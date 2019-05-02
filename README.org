@@ -125,10 +125,15 @@
   #+END_QUOTE                                                                                                                                                             
 
 ** HASKELL :> 数据格式解析
-  - JSON =: aeson
-  #+BEGIN_QUOTE
-    当前不支持非严格json解析，例如单引号或者key不含引号，可以改写低层库很方便实现
-  #+END_QUOTE
+  + JSON 系列
+    - aeson
+    #+BEGIN_QUOTE
+      当前不支持非严格json解析，例如单引号或者key不含引号，可以改写低层库很方便实现
+    #+END_QUOTE
+    - aeson-qq
+    #+BEGIN_QUOTE
+      aeson quasiquoter支持
+    #+END_QUOTE
   - YAML =: yaml
   #+BEGIN_QUOTE
     可以很容易与aeson集成
@@ -329,6 +334,8 @@
   - unorderded-containers
 
 ** HASKELL :> 系统工具库
+  - optparse-applicative [https://github.com/pcapriotti/optparse-applicative]
+  - envparse [https://github.com/tel/env-parser]
   - time
   - random
   - Glob
@@ -336,6 +343,7 @@
   - directory
   - monad-logger
   - configurator [https://github.com/bos/configurator]
+  - cron [https://github.com/michaelxavier/cron]
 
 ** HASKELL :> 测试工具
   - benchmark
@@ -350,6 +358,7 @@
   #+BEGIN_QUOTE
     haskell基础测试库
   #+END_QUOTE
+  - hspec
   - hedgehog
   - tasty
   #+BEGIN_QUOTE
