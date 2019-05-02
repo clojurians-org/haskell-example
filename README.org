@@ -47,6 +47,8 @@
   + 全栈开发[servant+reflex]
     - https://jappieklooster.nl/fullstack-haskell-reflex-and-servant.html
     - https://jappieklooster.nl/authentication-in-reflex-servant.html
+  + web开发系列
+    - servant + persistent: [https://www.parsonsmatt.org/2016/07/08/servant-persistent_updated.html]
 
 ** HASKELL :> 开发工具
   emacs dante :> [nix + cabal] <> [obelisk]
@@ -93,7 +95,7 @@
   #+BEGIN_QUOTE
     非常厉害的postgresql restful api服务
   #+END_QUOTE
-  - postgresql2websocket [https://github.com/frafra/postgresql2websocket]
+  - postgresql2websocket [https://github.com/diogob/postgres-websockets]
   #+BEGIN_QUOTE
     通过postgresql的notify接口建立socket实时推送服务
   #+END_QUOTE
@@ -117,6 +119,10 @@
   #+BEGIN_QUOTE
     通用网页实现的shell终端
   #+END_QUOTE
+  - matterhorn [https://github.com/matterhorn-chat/matterhorn]
+  #+BEGIN_QUOTE                                                                                                                                                           
+    Mattermost 命令行聊天工具
+  #+END_QUOTE                                                                                                                                                             
 
 ** HASKELL :> 数据格式解析
   - JSON =: aeson
@@ -132,6 +138,10 @@
   #+BEGIN_QUOTE
     性能强悍，大量使用lens操作
   #+END_QUOTE
+  - SHELL =: optparse-applicative
+  #+BEGIN_QUOTE                                                                                                                                                           
+    行业标准的命令行参数解析库
+  #+END_QUOTE                                                                                                                                                             
 
 ** HASKELL :> 通用格式解析器
   - parsec 
@@ -145,6 +155,12 @@
   - megaparsec
   #+BEGIN_QUOTE
     parsec的性能增强版本
+  #+END_QUOTE
+  
+** HASKELL :> 命令行开发
+  - brick
+  #+BEGIN_QUOTE    
+    控制台图形显示库
   #+END_QUOTE
 
 ** HASKELL :> 前端开发
@@ -162,29 +178,40 @@
   #+END_QUOTE
 
 ** HASKELL :> WEB开发框架
-  - servant-server
-  #+BEGIN_QUOTE
-    restful服务开发, 对xml的支持需要自己添加
-  #+END_QUOTE
-  - servant-auth
-  #+BEGIN_QUOTE
-    JWT及cookie验证
-  #+END_QUOTE
-  - servant-client
-  #+BEGIN_QUOTE
-    生成后端api调用代码
-  #+END_QUOTE
-  - servant-reflex
-  #+BEGIN_QUOTE
-    生成reflex前端api调用代码
-  #+END_QUOTE
-  - servant-swagger
-  #+BEGIN_QUOTE
-    servant swagger文档库
-  #+END_QUOTE
+  + servant 系列
+    - servant-server
+    #+BEGIN_QUOTE
+      restful服务开发, 对xml的支持需要自己添加
+    #+END_QUOTE
+    - servant-auth
+    #+BEGIN_QUOTE
+      JWT及cookie验证
+    #+END_QUOTE
+    - servant-client
+    #+BEGIN_QUOTE
+      生成后端api调用代码
+    #+END_QUOTE
+    - servant-reflex
+    #+BEGIN_QUOTE
+      生成reflex前端api调用代码
+    #+END_QUOTE
+    - servant-swagger
+    #+BEGIN_QUOTE
+      servant swagger文档库
+    #+END_QUOTE
+  + snap 系列
+    - snap-server
+    #+BEGIN_QUOTE                                                                                                                                                         
+      更轻量级的服务器
+    #+END_QUOTE                                                                                                                                                           
 
 ** HASKELL :> 数据库访问库
-  _ postgresql =: postgresql-simple
+  + postgresql 
+    - hasql
+    #+BEGIN_QUOTE
+      采用二进制协议, 带来野兽版的性能
+    #+END_QUOTE
+    - postgresql-simple
   + mysql =: mysql-simple
   + SQL Server =: tds
   + oracle =: odpic-raw
@@ -194,6 +221,9 @@
   + ORM & DSL 
     - persistent+Esqueleto
     - groundhog [https://github.com/lykahb/groundhog]
+  + MIGRATION
+    - dbmigrations [https://github.com/jtdaugherty/dbmigrations]
+
 ** HASKELL :> 字节编码库
   - base64-bytestring
   - utf8-bytestring
@@ -210,7 +240,11 @@
   - lens
   #+BEGIN_QUOTE
     多层级数据遍历组合处理库
-  #+END_QUOTE  
+  #+END_QUOTE
+  - QuickCheck
+  #+BEGIN_QUOTE                                                                                                                                                           
+    使用Generator自动造数，非常好用
+  #+END_QUOTE                                                                                                                                                             
 
 ** HASKELL :> 大数据处理技术
   - hw-kafka-conduit
@@ -260,9 +294,52 @@
   #+BEGIN_QUOTE
     灵活版脚本工具
   #+END_QUOTE
-  
-** HASKELL :>  其它常用库[等整理]
-  - resourcet
-  - mono-traversable
-  - rio
 
+** HASKELL :> 通用monad工具库
+  - transformers
+  #+BEGIN_QUOTE
+    快速连接不同类型的monad世界
+  #+END_QUOTE
+  - monad-loops
+  #+BEGIN_QUOTE                                                                                                                                                           
+    monad 循环运行
+  #+END_QUOTE                                                                                                                                                             
+  - retry
+  #+BEGIN_QUOTE                                                                                                                                                          $
+    monad 重试库
+  #+END_QUOTE
+  - resource-pool
+  #+BEGIN_QUOTE                                                                                                                                                          $
+    monad 资源池
+  #+END_QUOTE                                                                                                                                                             
+  - contravariant
+  - monad-control
+
+** HASKELL :> 测试工具
+  - benchmark
+  #+BEGIN_QUOTE
+    业界标准性能测试库
+  #+END_QUOTE
+  - QuickCheck
+  #+BEGIN_QUOTE                                                                                                                                                           
+    property-based的haskell随机测试库
+  #+END_QUOTE                                                                                                                                                             
+  - HUnit
+  #+BEGIN_QUOTE
+    haskell基础测试库
+  #+END_QUOTE
+  - hedgehog
+
+** HASKELL :>  其它常用库[待整理]
+  - time
+  - filepath
+  - directory
+  - Glob
+  - split
+  - monad-logger
+  - resourcet
+  - containers
+  - unorderded-containers
+  - dependent-map
+  - dependent-sum
+  - rio
