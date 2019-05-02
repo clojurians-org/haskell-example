@@ -93,6 +93,10 @@
   #+BEGIN_QUOTE
     非常厉害的postgresql restful api服务
   #+END_QUOTE
+  - postgresql2websocket [https://github.com/frafra/postgresql2websocket]
+  #+BEGIN_QUOTE
+    通过postgresql的notify接口建立socket实时推送服务
+  #+END_QUOTE
   - hnix [https://github.com/haskell-nix/hnix]
   #+BEGIN_QUOTE
     nix的haskell实现版本，方便用于测试集成
@@ -160,7 +164,7 @@
 ** HASKELL :> WEB开发框架
   - servant-server
   #+BEGIN_QUOTE
-    restful服务开发
+    restful服务开发, 对xml的支持需要自己添加
   #+END_QUOTE
   - servant-auth
   #+BEGIN_QUOTE
@@ -180,15 +184,16 @@
   #+END_QUOTE
 
 ** HASKELL :> 数据库访问库
-  - postgresql =: postgresql-simple
-  - mysql =: mysql-simple
-  - SQL Server =: tds
-  - oracle =: odpic-raw
+  _ postgresql =: postgresql-simple
+  + mysql =: mysql-simple
+  + SQL Server =: tds
+  + oracle =: odpic-raw
   #+BEGIN_QUOTE
-    oracle使用最简单的库
+    oracle使用最简单的库, blob支持需要自己添加
   #+END_QUOTE
-  - ORM & DSL =: persistent+Esqueleto
-
+  + ORM & DSL 
+    - persistent+Esqueleto
+    - groundhog [https://github.com/lykahb/groundhog]
 ** HASKELL :> 字节编码库
   - base64-bytestring
   - utf8-bytestring
