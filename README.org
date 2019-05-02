@@ -245,7 +245,11 @@
   #+BEGIN_QUOTE                                                                                                                                                           
     使用Generator自动造数，非常好用
   #+END_QUOTE                                                                                                                                                             
-
+  - split
+  #+BEGIN_QUOTE
+    list切割工具
+  #+END_QUOTE
+  
 ** HASKELL :> 大数据处理技术
   - hw-kafka-conduit
   #+BEGIN_QUOTE
@@ -315,6 +319,18 @@
   - contravariant
   - monad-control
 
+** HASKELL :> 数据结构
+  - vector
+  - containers
+  - unorderded-containers
+
+** HASKELL :> 系统工具库
+  - time
+  - Glob
+  - filepath
+  - directory
+  - monad-logger
+
 ** HASKELL :> 测试工具
   - benchmark
   #+BEGIN_QUOTE
@@ -335,15 +351,8 @@
   #+END_QUOTE
 
 ** HASKELL :>  其它常用库[待整理]
-  - time
-  - filepath
-  - directory
-  - Glob
-  - split
-  - monad-logger
   - resourcet
-  - containers
-  - unorderded-containers
+  - unliftio
   - dependent-map
   - dependent-sum
   - rio
