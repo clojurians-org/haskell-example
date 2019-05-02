@@ -329,6 +329,10 @@
     haskell基础测试库
   #+END_QUOTE
   - hedgehog
+  - tasty
+  #+BEGIN_QUOTE
+    一站式测试解决方案
+  #+END_QUOTE
 
 ** HASKELL :>  其它常用库[待整理]
   - time
