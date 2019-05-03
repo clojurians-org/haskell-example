@@ -77,11 +77,15 @@
 ** HASKELL :> 知名工具
   - pandoc [https://github.com/jgm/pandoc]
   #+BEGIN_QUOTE
-    进行任意文档格式转换
+    文档格式转换任意转换[org-mode/pdf/markdown/docx/TeX ...]
   #+END_QUOTE
   - gitit [https://github.com/jgm/gitit]
   #+BEGIN_QUOTE
-    轻松一键安装，零依赖: nix-env -f '<nixpkgs>' -iA haskellPackages.gitit  
+    WIKI文档服务器: 轻松一键安装，零依赖[nix-env -f '<nixpkgs>' -iA haskellPackages.gitit]
+  #+END_QUOTE
+  - hakyll [https://github.com/jaspervdj/hakyll]
+  #+BEGIN_QUOTE
+    搭建静态博客网站
   #+END_QUOTE
   - Haxl [https://github.com/facebook/Haxl]
   #+BEGIN_QUOTE
@@ -90,6 +94,10 @@
   - queryparser [https://github.com/uber/queryparser]
   #+BEGIN_QUOTE
     uber出品, 数据仓库血缘分析工具, 支持vertica|HIVE|presto
+  #+END_QUOTE
+  - patat [https://github.com/jaspervdj/patat]
+  #+BEGIN_QUOTE
+    命令行模式PPT演示
   #+END_QUOTE
   - postgREST [https://github.com/PostgREST/postgrest]
   #+BEGIN_QUOTE
@@ -183,6 +191,10 @@
   #+END_QUOTE
 
 ** HASKELL :> WEB开发框架
+  + websockets 系列
+    - websockets [https://github.com/jaspervdj/websockets]
+    - wai-websockets [https://github.com/yesodweb/wai/tree/master/wai-websockets]
+    - postgresql2websocket [https://github.com/diogob/postgres-websockets]
   + servant 系列
     - servant-server
     #+BEGIN_QUOTE
@@ -207,7 +219,7 @@
   + snap 系列
     - snap-server
     #+BEGIN_QUOTE                                                                                                                                                         
-      更轻量级的服务器
+      轻量级高性能WEB服务器
     #+END_QUOTE                                                                                                                                                           
 
 ** HASKELL :> 数据库访问库
@@ -272,7 +284,7 @@
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
 
 ** HASKELL :> 高并行并发框架
-  + 并行库
+  + 并行库系列
     - parallel
     #+BEGIN_QUOTE
       快捷版本并行库
@@ -359,6 +371,12 @@
   - configurator [https://github.com/bos/configurator]
   - cron [https://github.com/michaelxavier/cron]
 
+** HASKELL :> 底层开发
+  - c2hs
+  #+BEGIN_QUOTE
+    生成c库调用绑定
+  #+END_QUOTE
+
 ** HASKELL :> 测试工具
   - benchmark
   #+BEGIN_QUOTE
@@ -385,4 +403,3 @@
   - dependent-map
   - dependent-sum
   - rio
-  - string-conversions
