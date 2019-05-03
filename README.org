@@ -195,6 +195,13 @@
   #+END_QUOTE
 
 ** HASKELL :> WEB开发框架
+  + 基础数据结构
+    - http-types
+    - cookie
+  + wai 底层WEB服务[Haskell Web Application Interface]
+    - wai
+    - wai-extra
+    - wai-app-static
   + websockets 系列
     - websockets [https://github.com/jaspervdj/websockets]
     - wai-websockets [https://github.com/yesodweb/wai/tree/master/wai-websockets]
@@ -226,7 +233,8 @@
       轻量级高性能WEB服务器
     #+END_QUOTE                                                                                                                                                           
 
-** HASKELL :> 数据库访问库
+** HASKELL :> 数据访问库
+  + amqp [https://github.com/hreinhardt/amqp]
   + postgresql 
     - hasql
     #+BEGIN_QUOTE
@@ -292,6 +300,7 @@
   #+END_QUOTE
   - sparkle [https://github.com/tweag/sparkle]
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
+  - tensorflow [https://github.com/tensorflow/haskell]
 
 ** HASKELL :> 高并行并发框架
   + 并行库系列
@@ -318,11 +327,15 @@
   + CSP-高并发系列
 
 ** HASKELL :> 网络传输工具
-  + SSH =: libssh2
-  #+END_QUOTE
+  + FTP
+    - ftp-client [https://github.com/mr/ftp-client]
+  + SSH/SFTP
+    - libssh2
   + HTTP/HTTPS
     - http-client
     - http-client-tls
+  + EMAIL
+    - hsemail [https://github.com/peti/hsemail]
 
 ** HASKELL :> 运行时动态加载
   - hint
@@ -370,16 +383,19 @@
   - semigroups
   - semigroupoids
   - rounded
-  - monad-control
   - monad-coroutine
+  - monad-control
 
-** HASKELL :> 数据结构
+
+** HASKELL :> 基础数据结构
   - bytestring
   - text
+  - case-insensitive
   - string-conv
   #+BEGIN_QUOTE
     string/bytestring/text自由转换
   #+END_QUOTE
+  - scientific
   - array
   - vector
   - containers
@@ -409,6 +425,10 @@
     生成c库调用绑定
   #+END_QUOTE
 
+** HASKELL :> 监控利器
+  - prometheus [https://github.com/bitnomial/prometheus]
+  - ekg [https://github.com/tibbe/ekg]
+  - ekg-statsd [https://github.com/tibbe/ekg-statsd]
 
 ** HASKELL :> 测试工具
   - benchmark
