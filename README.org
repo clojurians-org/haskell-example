@@ -216,6 +216,10 @@
     #+BEGIN_QUOTE
       采用二进制协议, 带来野兽版的性能
     #+END_QUOTE
+    - hasql-pool
+    #+BEGIN_QUOTE
+      resource-pool的简易封装版本
+    #+END_QUOTE
     - postgresql-simple
   + mysql =: mysql-simple
   + SQL Server =: tds
@@ -268,22 +272,28 @@
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
 
 ** HASKELL :> 高并行并发框架
-  - parallel 并行库
-  #+BEGIN_QUOTE
-    快捷版本并行库
-  #+END_QUOTE
-  - monad-par 并行库
-  #+BEGIN_QUOTE
-    灵活定制版本并行库
-  #+END_QUOTE
-  - STM 
-  #+BEGIN_QUOTE
-    系统自带并发库
-  #+END_QUOTE
-  - distribute-process
-  #+BEGIN_QUOTE
-    分布式并发库
-  #+END_QUOTE
+  + 并行库
+    - parallel
+    #+BEGIN_QUOTE
+      快捷版本并行库
+    #+END_QUOTE
+    - monad-par 并行库
+    #+BEGIN_QUOTE
+      灵活定制版本并行库
+    #+END_QUOTE
+  + STM-高并发系列
+    - stm [https://github.com/ghc/ghc/blob/master/libraries/base/GHC/Conc/Sync.hs]
+    #+BEGIN_QUOTE
+      系统自带并发库
+    #+END_QUOTE
+    - stm-hamt [https://github.com/nikita-volkov/stm-hamt]
+    - stm-containers [https://github.com/nikita-volkov/stm-containers]
+  + ACTOR-高并发系列
+    distribute-process
+    #+BEGIN_QUOTE
+      分布式并发库
+    #+END_QUOTE
+  + CSP-高并发系列
 
 ** HASKELL :> 网络传输工具
   + SSH =: libssh2
@@ -329,6 +339,10 @@
   - monad-control
 
 ** HASKELL :> 数据结构
+  - string-conv
+  #+BEGIN_QUOTE
+    string/bytestring/text自由转换
+  #+END_QUOTE
   - vector
   - containers
   - unorderded-containers
