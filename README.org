@@ -27,10 +27,10 @@
     - 博客: https://www.jianshu.com/p/e0f710b3cd4c
   + CSP技术
     - 库源码学习: https://www.jianshu.com/p/694e95dc390c
-  + TypeClass :
-    - 视频: https://www.bilibili.com/video/av40042989
   + 类型系统:
     - 博客[未完成]：https://www.jianshu.com/p/ae3ed9c4870b
+  + TypeClass :
+    - 视频: https://www.bilibili.com/video/av40042989
   + Template Haskell
     - 博客: https://markkarpov.com/tutorial/th.html
     - 博客: https://wiki.haskell.org/Template_Haskell
@@ -129,7 +129,7 @@
   #+END_QUOTE
   - matterhorn [https://github.com/matterhorn-chat/matterhorn]
   #+BEGIN_QUOTE                                                                                                                                                           
-    Mattermost 命令行聊天工具
+    Mattermost 命令行聊天工具[https://github.com/mattermost/mattermost-server]
   #+END_QUOTE                                                                                                                                                             
 
 ** HASKELL :> 数据格式解析
@@ -142,6 +142,10 @@
     #+BEGIN_QUOTE
       aeson quasiquoter支持
     #+END_QUOTE
+    - lens-aeson [https://github.com/lens/lens-aeson]
+    #+BEGIN_QUOTE                                                                                                              
+      aeson的lens操作库
+    #+END_QUOTE                                                                                                                
   - YAML =: yaml
   #+BEGIN_QUOTE
     可以很容易与aeson集成
@@ -245,6 +249,7 @@
   + MIGRATION
     - dbmigrations [https://github.com/jtdaugherty/dbmigrations]
 
+
 ** HASKELL :> 字节编码库
   - base64-bytestring
   - utf8-bytestring
@@ -252,6 +257,11 @@
   #+BEGIN_QUOTE
     haskell业界标准加密库
   #+END_QUOTE
+  - cereal [https://github.com/GaloisInc/cereal]
+  #+BEGIN_QUOTE                                                                                                                
+    网络序列化库
+  #+END_QUOTE                                                                                                                  
+
 
 ** HASKELL :> 数据处理框架
   - conduit 
@@ -330,34 +340,55 @@
     灵活版脚本工具
   #+END_QUOTE
 
+** HASKELL :> 杀手级技能
+  - template haskell [https://github.com/ghc/ghc/tree/master/libraries/template-haskell]
+
+
 ** HASKELL :> 通用monad工具库
-  - transformers
+  - transformers <> mtl [http://hub.darcs.net/ross/transformers]
   #+BEGIN_QUOTE
     快速连接不同类型的monad世界
   #+END_QUOTE
-  - monad-loops
-  #+BEGIN_QUOTE                                                                                                                                                           
-    monad 循环运行
-  #+END_QUOTE                                                                                                                                                             
-  - retry
-  #+BEGIN_QUOTE                                                                                                                                                          $
-    monad 重试库
-  #+END_QUOTE
-  - resource-pool
-  #+BEGIN_QUOTE                                                                                                                                                          $
-    monad 资源池
+  - async [https://github.com/simonmar/async]
+  - unliftio [https://github.com/fpco/unliftio]
+  - resource-pool <> resourcet 
+  #+BEGIN_QUOTE                                                                                                               $
+    monad 资源管理
+  #+END_QUOTE                                                                                                                 $
+  - monad-loops <> retry
+  #+BEGIN_QUOTE                                                                                                                  
+    monad 流程控制[循环<>重试]
   #+END_QUOTE                                                                                                                                                             
   - contravariant
+  - comonad
+  - profunctors
+  - bifunctor
+  - either
+  - free
+  - tagged
+  - categories
+  - semigroups
+  - semigroupoids
+  - rounded
   - monad-control
+  - monad-coroutine
 
 ** HASKELL :> 数据结构
+  - bytestring
+  - text
   - string-conv
   #+BEGIN_QUOTE
     string/bytestring/text自由转换
   #+END_QUOTE
+  - array
   - vector
   - containers
   - unorderded-containers
+  - deepseq
+  #+BEGIN_QUOTE                                                                                                                
+    完全strict实例化数据结构
+  #+END_QUOTE                                                                                                                  
+
 
 ** HASKELL :> 系统工具库
   - optparse-applicative [https://github.com/pcapriotti/optparse-applicative]
@@ -371,11 +402,13 @@
   - configurator [https://github.com/bos/configurator]
   - cron [https://github.com/michaelxavier/cron]
 
+
 ** HASKELL :> 底层开发
   - c2hs
   #+BEGIN_QUOTE
     生成c库调用绑定
   #+END_QUOTE
+
 
 ** HASKELL :> 测试工具
   - benchmark
@@ -397,9 +430,8 @@
     一站式测试解决方案
   #+END_QUOTE
 
+
 ** HASKELL :>  其它常用库[待整理]
-  - resourcet
-  - unliftio
   - dependent-map
   - dependent-sum
   - rio
