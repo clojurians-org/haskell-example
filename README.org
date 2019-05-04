@@ -79,7 +79,7 @@
   #+BEGIN_QUOTE
     文档格式转换任意转换[org-mode/pdf/markdown/docx/TeX ...]
   #+END_QUOTE
-  - gitit [https://github.com/jgm/gitit]
+  - gitit2 [https://github.com/jgm/gitit2]
   #+BEGIN_QUOTE
     WIKI文档服务器: 轻松一键安装，零依赖[nix-env -f '<nixpkgs>' -iA haskellPackages.gitit]
   #+END_QUOTE
@@ -102,10 +102,6 @@
   - postgREST [https://github.com/PostgREST/postgrest]
   #+BEGIN_QUOTE
     非常厉害的postgresql restful api服务
-  #+END_QUOTE
-  - postgresql2websocket [https://github.com/diogob/postgres-websockets]
-  #+BEGIN_QUOTE
-    通过postgresql的notify接口建立socket实时推送服务
   #+END_QUOTE
   - hnix [https://github.com/haskell-nix/hnix]
   #+BEGIN_QUOTE
@@ -138,6 +134,7 @@
     #+BEGIN_QUOTE
       当前不支持非严格json解析，例如单引号或者key不含引号，可以改写低层库很方便实现
     #+END_QUOTE
+    - aeson-pretty
     - aeson-qq
     #+BEGIN_QUOTE
       aeson quasiquoter支持
@@ -205,7 +202,6 @@
   + websockets 系列
     - websockets [https://github.com/jaspervdj/websockets]
     - wai-websockets [https://github.com/yesodweb/wai/tree/master/wai-websockets]
-    - postgresql2websocket [https://github.com/diogob/postgres-websockets]
   + servant 系列
     - servant-server
     #+BEGIN_QUOTE
@@ -232,8 +228,15 @@
     #+BEGIN_QUOTE                                                                                                                                                         
       轻量级高性能WEB服务器
     #+END_QUOTE                                                                                                                                                           
+  + Yesod 系列
+    - yesod-core
+    - yesod
+    - yesod-form
+    - yesod-static
 
-** HASKELL :> 数据访问库
+** HASKELL :> 数据访问层
+  + acid-state [https://github.com/acid-state/acid-state]
+  + haskey [https://github.com/haskell-haskey/haskey]
   + amqp [https://github.com/hreinhardt/amqp]
   + postgresql 
     - hasql
@@ -245,6 +248,10 @@
       resource-pool的简易封装版本
     #+END_QUOTE
     - postgresql-simple
+    - postgresql-websockets + pg-recorder [https://github.com/diogob/postgres-websockets]
+    #+BEGIN_QUOTE
+       postgresql-websockets将notify消息接口转为websocket; pg-recorder用于将websocket接口写入数据库
+    #+END_QUOTE
   + mysql =: mysql-simple
   + SQL Server =: tds
   + oracle =: odpic-raw
@@ -302,6 +309,7 @@
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
   - tensorflow [https://github.com/tensorflow/haskell]
 
+
 ** HASKELL :> 高并行并发框架
   + 并行库系列
     - parallel
@@ -326,7 +334,9 @@
     #+END_QUOTE
   + CSP-高并发系列
 
+
 ** HASKELL :> 网络传输工具
+  + network [https://github.com/haskell/network]
   + FTP
     - ftp-client [https://github.com/mr/ftp-client]
   + SSH/SFTP
@@ -337,11 +347,13 @@
   + EMAIL
     - hsemail [https://github.com/peti/hsemail]
 
+
 ** HASKELL :> 运行时动态加载
   - hint
   #+BEGIN_QUOTE
     动态运行时加载
   #+END_QUOTE
+
 
 ** HASKELL :> 脚本工具
   - Haskell-Turtle-Library
@@ -352,6 +364,7 @@
   #+BEGIN_QUOTE
     灵活版脚本工具
   #+END_QUOTE
+
 
 ** HASKELL :> 杀手级技能
   - template haskell [https://github.com/ghc/ghc/tree/master/libraries/template-haskell]
@@ -425,12 +438,14 @@
     生成c库调用绑定
   #+END_QUOTE
 
+
 ** HASKELL :> 监控利器
   - prometheus [https://github.com/bitnomial/prometheus]
   - ekg [https://github.com/tibbe/ekg]
   - ekg-statsd [https://github.com/tibbe/ekg-statsd]
 
-** HASKELL :> 测试工具
+
+** HASKELL :> 测试库
   - benchmark
   #+BEGIN_QUOTE
     业界标准性能测试库
