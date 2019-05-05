@@ -1,13 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
 import GHC.Generics (Generic)
 import Data.Aeson (Value)
 import Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString as SB
 import Data.Text.Lazy (Text)
+import qualified Data.Text.Lazy.IO as T
 import Control.Monad.Loops (unfoldM)
 import Database.Dpi (
     ExecMode(ModeExecDefault), DataValue(..), OracleConfig, SQL
@@ -17,6 +21,9 @@ import Database.Dpi (
 import Database.Dpi.Field (
     DataField(..), FromDataFields(fromDataFields'), FromDataField(fromDataField)
   )
+
+import Data.String.Conv (toS, toSL)
+import Text.Heredoc (str)
 
 data TbInterface = TbInterface {
     tbInterface_id :: Maybe Text
@@ -38,10 +45,6 @@ mkTbInterfaceFromList (
   tbInterface_vendor_id : tbInterface_server_id : tbInterface_success_code : []
   ) = TbInterface {..}
   
-main :: IO ()
-main = putStrLn "Hello, Haskell!"
-
-
 quickQuery :: FromDataFields a => OracleConfig -> SQL -> IO [a]
 quickQuery conf sql = do
   let fetchRow st cn = mapM (\i -> DataField <$> (getQueryInfo st i) <*> (getQueryValue st i)) [1..cn]
@@ -53,15 +56,21 @@ quickQuery conf sql = do
         mapM (const (fetchRow st cn >>= fromDataFields')) allFetch
 
 instance FromDataField Text where
-  fromDataField f = undefined
+  fromDataField f = fmap toS <$> (fromDataField f :: IO (Maybe SB.ByteString))
   
 instance FromDataFields TbInterface where
   fromDataFields' dfs = mkTbInterfaceFromList <$> sequence (fmap fromDataField dfs)
 
--- >>> :set -XOverloadedStrings
--- >>> :reload
--- Ok, one module loaded.
+main :: IO ()
+main = do
+  let dbConf = defaultOracle "KB" "KB123456" "10.132.37.241:1521/EDMP"
+  r :: [TbInterface] <- quickQuery dbConf
+    [str|select
+        |  id, name, description, 'type'
+        |, state, timeliness, params, result_plugin_type
+        |, vendor_id, server_id, success_code
+        |from tb_interface where rownum <= 2
+        |]
+  T.putStrLn (toS (show r))
 
--- >>> let dbConf = defaultOracle "KB" "KB123456" "10.132.37.241:1521/EDMP"
--- >>> quickQuery dbConf "select * from tb_interface where rownum <= 2" :: IO [String]
--- ["\"zhengxin_doQuery\",\"????????\",\"????????\",\"assembly\",\"T\",\"0second\",,\"FETCHER\",\"times\",\"f1c5c9a2-9a35-409a-8710-c8a56c93dad6\",\"bumblebee-acquisition-server\",\"00000\"","\"zhengxin_doQuery\",\"????????\",\"????????\",\"assembly\",\"T\",\"0second\",,\"FETCHER\",\"times\",\"f1c5c9a2-9a35-409a-8710-c8a56c93dad6\",\"bumblebee-acquisition-server\",\"00000\""]
+-- >>> repl
