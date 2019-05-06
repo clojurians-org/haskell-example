@@ -11,7 +11,7 @@ import Network.Minio (
   , fPutObject, defaultPutObjectOptions
   )
 
-import Conduit (runConduit)
+import Conduit (runConduit, (.|), takeC, mapM_C)
 
 
 myCI :: ConnectInfo
@@ -36,7 +36,9 @@ main = do
       "/home/op/my-env/nix.sh.out/tgz.nix-2.2.2"
       defaultPutObjectOptions
     --}
-    runConduit $ listObjects "icif.uat" Nothing true
+    runConduit $ listObjects "icif.uat" Nothing True
+              .| takeC 10
+              .| mapM_C (liftIO . print)
   case res of
     Left e -> putStrLn $ "operate failed due to " ++ (show e)
     Right _ -> putStrLn "done!"
