@@ -261,6 +261,10 @@
 ** HASKELL :> 字节编码库
   - base64-bytestring
   - utf8-bytestring
+  - jose-jwt [https://github.com/tekul/jose-jwt]
+  #+BEGIN_QUOTE
+    JWT TOKEN
+  #+END_QUOTE
   - cryptonite
   #+BEGIN_QUOTE
     haskell业界标准加密库
@@ -319,6 +323,9 @@
     #+END_QUOTE
     - stm-hamt [https://github.com/nikita-volkov/stm-hamt]
     - stm-containers [https://github.com/nikita-volkov/stm-containers]
+    - stm-chans
+    - stm-conduit
+    - TCache
   + ACTOR-高并发系列
     distribute-process
     #+BEGIN_QUOTE
@@ -388,6 +395,7 @@
 
 
 ** HASKELL :> 基础数据结构
+  - either
   - bytestring
   - text
   - case-insensitive
