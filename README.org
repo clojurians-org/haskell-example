@@ -49,12 +49,17 @@
     - https://jappieklooster.nl/authentication-in-reflex-servant.html
   + web开发系列
     - servant + persistent: [https://www.parsonsmatt.org/2016/07/08/servant-persistent_updated.html]
+  + 静态构建
+    - static-haskell-nix: https://vaibhavsagar.com/blog/2018/01/03/static-haskell-nix/
 
 ** HASKELL :> 开发工具
-  emacs dante :> [nix + cabal] <> [obelisk]
-  - emacs dante [https://github.com/jyp/dante]
-  - nix + cabal 配置 [https://github.com/Gabriel439/haskell-nix]
-  - obelisk [https://github.com/obsidiansystems/obelisk]
+  + emacs dante :> [nix + cabal] <> [obelisk]
+    - emacs dante [https://github.com/jyp/dante]
+    - nix + cabal 配置 [https://github.com/Gabriel439/haskell-nix]
+    - obelisk [https://github.com/obsidiansystems/obelisk]
+  + static linking
+    - static-haskell-nix [https://github.com/nh2/static-haskell-nix]
+  
 
 ** HASKELL :> 全栈开发
   - C FFI [https://github.com/ghc/ghc]
@@ -445,6 +450,11 @@
   #+BEGIN_QUOTE
     生成c库调用绑定
   #+END_QUOTE
+  - call-haskell-from-anything
+  #+BEGIN_QUOTE
+    任意语言调用haskell
+    https://github.com/nh2/call-haskell-from-anything
+  #+END_QUOTE
 
 
 ** HASKELL :> 监控利器
@@ -454,7 +464,7 @@
 
 
 ** HASKELL :> 测试库
-  - benchmark
+  - criterion + criterion-measurement
   #+BEGIN_QUOTE
     业界标准性能测试库
   #+END_QUOTE
