@@ -23,8 +23,17 @@ executable minio-migration
   -- other-extensions:
   build-depends:       
       base
+    , bytestring
+    , text
+    , string-conv
     , minio-hs
+    , criterion-measurement
+    , resourcet
     , conduit
+    , conduit-extra
+    , stm-chans
+    , stm-conduit
+    , unliftio
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions: OverloadedStrings
