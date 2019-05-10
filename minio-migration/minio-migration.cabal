@@ -34,6 +34,7 @@ executable minio-migration
     , unordered-containers
     , time
     , retry
+    , exceptions
     , criterion-measurement
     , resourcet
     , conduit

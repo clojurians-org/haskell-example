@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 --
 -- MinIO Haskell SDK, (C) 2017 MinIO, Inc.
 --
@@ -21,16 +20,10 @@ import qualified Data.Conduit             as C
 import qualified Data.Conduit.Combinators as CC
 import qualified Data.Conduit.List        as CL
 
-import           Lib.Prelude hiding (putStrLn)
-import Prelude (putStrLn, String)
+import           Lib.Prelude
 
 import           Network.Minio.Data
 import           Network.Minio.S3API
-
-import Data.Default (def)
-import Control.Retry (retrying)
-import Data.Maybe (isNothing, fromJust)
-import UnliftIO.Exception (SomeException, catch)
 
 -- | List objects in a bucket matching the given prefix. If recurse is
 -- set to True objects matching prefix are recursively listed.
@@ -55,12 +48,10 @@ listObjectsV1 bucket prefix recurse = loop Nothing
   where
     loop :: Maybe Text -> C.ConduitM () ObjectInfo Minio ()
     loop nextMarker = do
-      let delimiter = bool (Just "/") Nothing recurse
-      let listObjectsMaybe = fmap Just (listObjectsV1' bucket prefix nextMarker delimiter Nothing)
-                                `catch` \(e :: SomeException) -> liftIO (putStrLn (show e)) >> return Nothing
+      let
+        delimiter = bool (Just "/") Nothing recurse
 
-      res <- lift $ fmap fromJust $ retrying def  (const $ return . isNothing) (const listObjectsMaybe)
-      liftIO $ putStrLn $ "[debug] fetching dir ..."
+      res <- lift $ listObjectsV1' bucket prefix nextMarker delimiter Nothing
       CL.sourceList $ lorObjects' res
       when (lorHasMore' res) $
         loop (lorNextMarker res)

@@ -6,12 +6,19 @@ import System.Environment (getArgs)
 import Data.Function ((&))
 import Data.String (fromString)
 import Control.Monad (void, when)
-import Control.Monad.IO.Class (liftIO) 
-
+import Control.Monad.IO.Class (liftIO)
+-- managerResponseTimeout
+import Network.HTTP.Client (
+    ManagerSettings(..)
+  , defaultManagerSettings, responseTimeoutMicro
+  )
+import Network.HTTP.Conduit (tlsManagerSettings, newManager)
 import Network.Minio (
-    Minio, ConnectInfo(..), Credentials(..), ObjectInfo(..), Bucket, Object
-  , setCreds, setRegion
-  , runMinio, makeBucket, bucketExists, listBuckets
+    Minio, MinioConn, ConnectInfo(..)
+  , Credentials(..), ObjectInfo(..), Bucket, Object
+  , setCreds, setRegion, mkMinioConn
+  , runMinio, runMinioWith
+  , makeBucket, bucketExists, listBuckets
   , listObjects, listObjectsV1, fPutObject, fGetObject
   , defaultGetObjectOptions, defaultPutObjectOptions
   )
@@ -41,6 +48,8 @@ import Data.Default (def)
 import Control.Retry (retrying)
 import Data.Maybe (isNothing)
 
+import System.FilePath ( (</>), takeDirectory)
+
 importMinioMissing :: FilePath -> Bucket -> ObjectInfo -> Minio ()
 importMinioMissing localDir bucket remoteOI = do
   let remotePathText = oiObject remoteOI
@@ -49,24 +58,38 @@ importMinioMissing localDir bucket remoteOI = do
                          `catch` \(e ::SomeException) -> liftIO (putStrLn (show e)) >> return Nothing
   fileExist <- doesFileExist localPath 
   if | fileExist -> liftIO $ putStrLn $ localPath ++ " exist already!"
-     | otherwise -> retrying def (const $ return . isNothing) (const getObjectMaybe) >> (liftIO $ putStrLn $ localPath ++ " downloaded!")
+     | otherwise -> do
+         createDirectoryIfMissing True (takeDirectory localPath)
+         retrying def (const $ return . isNothing) (const getObjectMaybe) >> (liftIO $ putStrLn $ localPath ++ " downloaded!")
 
 mkCI :: ConnectInfo -> Text -> Text -> ConnectInfo
-mkCI ci accessKey secretKey= ci & setCreds (Credentials accessKey secretKey) & setRegion "us-east-1"
+mkCI ci accessKey secretKey = ci & setCreds (Credentials accessKey secretKey) & setRegion "us-east-1"
 
+mkMC :: ConnectInfo -> Text -> Text -> Int -> IO MinioConn
+mkMC ci accessKey secretKey timeout = do
+  let ci' =  ci & setCreds (Credentials accessKey secretKey) & setRegion "us-east-1"
+  let timeoutSeconds = 1000 * 1000 * timeout
+  let settings | connectIsSecure ci' = tlsManagerSettings
+               | otherwise = defaultManagerSettings
+  mgr <- newManager settings
+           { managerResponseTimeout = responseTimeoutMicro timeoutSeconds }
+  mkMinioConn  ci' mgr
+  
+  
 main :: IO ()
 main = do
-  [outPath, host, accessKey, secretKey, bucket] :: [String] <- getArgs
---      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.132.81.38:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "icif.uat"]
---      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.129.35.175:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "cib"]
---      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.129.35.175:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "test.icif"]
+  [outPath, host, accessKey, secretKey, bucket, timeout] :: [String] <- getArgs
+--      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.132.81.38:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "icif.uat", 3600]
+--      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.129.35.175:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "cib", 3600]
+--      return ["/home/op/my-work/haskell-example/minio-migration/data", "http://10.129.35.175:9000", "BY2BFHISRTPNY36IR4TD", "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7", "test.icif", 3600]
 
   startTs <- getTime
   putStrLn $ "start ..."
 
-  let outBucketPath = outPath <> "/" <> bucket
+  let outBucketPath = outPath </>  bucket
   createDirectoryIfMissing True outBucketPath
-  res <- runMinio (mkCI (fromString host) (toS accessKey) (toS secretKey)) $ do
+  minioConn <- mkMC (fromString host) (toS accessKey) (toS secretKey) (read timeout)
+  res <- runMinioWith minioConn $ do
       (reg, chan) <- liftResourceT $ allocate (newTBMChanIO 2000) (atomically . closeTBMChan)
       _ <- async $ do
         runConduit $ listObjectsV1 (toS bucket) Nothing True

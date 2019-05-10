@@ -28,6 +28,10 @@ module Network.Minio.API
   , checkObjectNameValidity
   ) where
 
+import qualified Control.Monad.Catch       as CMC
+import           Control.Retry             (fullJitterBackoff,
+                                            limitRetriesByCumulativeDelay,
+                                            recovering)
 import qualified Data.ByteString           as B
 import qualified Data.Char                 as C
 import qualified Data.Conduit              as C
@@ -140,11 +144,34 @@ buildRequest ri = do
         , NC.requestBody = getRequestBody (riPayload s3Req)
         }
 
+
 executeRequest :: S3ReqInfo -> Minio (Response LByteString)
 executeRequest ri = do
   req <- buildRequest ri
   mgr <- asks mcConnManager
-  httpLbs req mgr
+
+  -- Set up a retrying policy for requests that time out
+  liftIO $ recovering retryPolicy shouldRetryHandler $ const $
+      httpLbs req mgr
+
+  where
+    -- Retry using the full-jitter backoff method for up to 10 mins
+    -- total
+    retryPolicy = limitRetriesByCumulativeDelay tenMins
+                  $ fullJitterBackoff oneMilliSecond
+    oneMilliSecond = 100000 -- in microseconds
+    tenMins = 10 * 60 * 1000000 -- in microseconds
+    -- retry on connection related failure
+    shouldRetryHandler =
+        [ const $
+          CMC.Handler (\(NC.HttpExceptionRequest _ exn) ->
+                      case (exn :: NC.HttpExceptionContent) of
+                        NC.ResponseTimeout     -> return True
+                        NC.ConnectionTimeout   -> return True
+                        NC.ConnectionFailure _ -> return True
+                        _                      -> return False
+                  )
+        ]
 
 
 mkStreamRequest :: S3ReqInfo

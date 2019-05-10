@@ -35,7 +35,7 @@ module Network.Minio
 
   -- * Connecting to object storage
   ---------------------------------
-  , ConnectInfo
+  , ConnectInfo(..)
   , setRegion
   , setCreds
   , setCredsFrom

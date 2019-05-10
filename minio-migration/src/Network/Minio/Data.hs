@@ -37,8 +37,7 @@ import qualified Data.Text                    as T
 import qualified Data.Text.Encoding           as TE
 import           Data.Time                    (defaultTimeLocale, formatTime)
 import           GHC.Show                     (Show (show))
-import           Network.HTTP.Client          (defaultManagerSettings, ManagerSettings(..)
-                                              ,responseTimeoutMicro)
+import           Network.HTTP.Client          (defaultManagerSettings)
 import qualified Network.HTTP.Conduit         as NC
 import           Network.HTTP.Types           (ByteRange, Header, Method, Query,
                                                hRange)
@@ -956,9 +955,9 @@ instance HasSvcNamespace MinioConn where
 -- object storage is accessed.
 connect :: ConnectInfo -> IO MinioConn
 connect ci = do
-  let settings | connectIsSecure ci = NC.tlsManagerSettings 
+  let settings | connectIsSecure ci = NC.tlsManagerSettings
                | otherwise = defaultManagerSettings
-  mgr <- NC.newManager settings {managerResponseTimeout = responseTimeoutMicro (1000 * 1000 * 60 * 2)}
+  mgr <- NC.newManager settings
   mkMinioConn ci mgr
 
 -- | Run the computation accessing object storage using the given
