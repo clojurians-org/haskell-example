@@ -23,6 +23,8 @@
   #+END_QUOTE
 
 ** HASKELL :>  技术文章
+  + haskell培训教程
+    - Applied Haskell https://haskell.fpcomplete.com/syllabus
   + Monad连接器:
     - 博客: https://www.jianshu.com/p/e0f710b3cd4c
   + CSP技术
@@ -51,6 +53,9 @@
     - servant + persistent: [https://www.parsonsmatt.org/2016/07/08/servant-persistent_updated.html]
   + 静态构建
     - static-haskell-nix: https://vaibhavsagar.com/blog/2018/01/03/static-haskell-nix/
+  + GHC底层知识
+    - PrimMonad: https://www.fpcomplete.com/blog/2015/02/primitive-haskell
+    - 执行顺序: https://wiki.haskell.org/Evaluation_order_and_state_tokens
 
 ** HASKELL :> 开发工具
   + emacs dante :> [nix + cabal] <> [obelisk]
@@ -315,6 +320,7 @@
     conduit在kafka平台上运行
   #+END_QUOTE
   - sparkle [https://github.com/tweag/sparkle]
+  - minio-hs
   - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
   - tensorflow [https://github.com/tensorflow/haskell]
 
@@ -410,7 +416,7 @@
   - rounded
   - monad-coroutine
   - monad-control
-
+  - primitive
 
 ** HASKELL :> 基础数据结构
   - either
