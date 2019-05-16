@@ -1,6 +1,16 @@
-{ pkgs ? (import (builtins.fetchTarball {url="https://github.com/NixOS/nixpkgs/archive/88ae8f7d.tar.gz";}) {}).pkgsMusl} :
+# nix-channel --add https://github.com/NixOS/nixpkgs/archive/88ae8f7d.tar.gz nixpkgs-static
+# nix-channel --update nixpkgs-static
+# export NIX_PATH=nixpkgs-static=/home/op/.nix-defexpr/channels/nixpkgs-static
 
-with pkgs;
+{ nixpkgs ? (import <nixpkgs-static> {
+              config.packageOverrides = pkgs: rec {
+                nix = pkgs.nix.overrideDerivation (old: {
+                  doInstallCheck = false ;
+                }) ;
+              } ;
+            }).pkgsMusl} :
+
+with nixpkgs;
 let
   haskellPackages = pkgs.haskellPackages.override {
     overrides = self: super: with pkgs.haskell.lib; {
@@ -16,7 +26,8 @@ let
       #   }) {})) ;
     } ;
   } ;
-  pkg = haskellPackages.developPackage {
+in
+  haskellPackages.developPackage {
     root = ./.;
 
     modifier = drv: haskell.lib.overrideCabal drv (attrs: {
@@ -28,14 +39,11 @@ let
       enableSharedLibraries = false;
       configureFlags = [
           "--ghc-option=-optl=-static"
+          "--ghc-option=-optl=-pthread"
           "--extra-lib-dirs=${pkgs.gmp6.override { withStatic = true; }}/lib"
           "--extra-lib-dirs=${pkgs.zlib.static}/lib"
           "--disable-executable-stripping"
       ];
 
     }) ;
-  } ;
-  buildInputs = [ ] ;
-in pkg.overrideAttrs(attrs: {
-  buildInputs = attrs.buildInputs ++ buildInputs ;
-})
+  }
