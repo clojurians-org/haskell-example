@@ -12,6 +12,7 @@ library
                , reflex-dom
                , obelisk-generated-static
                , text
+               , reflex-dom-echarts
   exposed-modules:
     Frontend
   ghc-options: -Wall
