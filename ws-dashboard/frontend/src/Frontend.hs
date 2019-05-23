@@ -75,20 +75,21 @@ home :: ( DomBuilder t m, PostBuild t m, Prerender js m, PerformEvent t m, Monad
         ) => m ()
 home = do
   pb <- getPostBuild
-  let opts :: ChartOptions = undefined
+  let opts :: ChartOptions = def
   let mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%FT%R" s :: UTCTime
   let chartData = 
           fromList [ ("success"
-                        , ( def & series_smooth ?~ Left True & series_name ?~ "success"
+                        , ( def & series_smooth ?~ Left True & series_name ?~ "success" :: Series SeriesLine
                           , 15 :: Int
                           , [(mkTs "2018-01-01T05:03", 1.0 :: Double)] <$ pb))
                    , ("fail"
-                        , ( def & series_smooth ?~ Left True & series_name ?~ "fail"
+                        , ( def & series_smooth ?~ Left True & series_name ?~ "fail" :: Series SeriesLine
                           , 15 :: Int
                           , [(mkTs "2018-01-01T05:03", 2.0 :: Double)] <$ pb))
                      ]
   prerender blank $  void $ do
     timeLineChart $ TimeLineChartConfig (600, 400) (constDyn opts) chartData
+  text "hello world"
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
