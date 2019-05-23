@@ -19,6 +19,10 @@ import qualified Data.ByteString as B
 
 import Control.Lens ((.~), (?~))
 import Control.Monad (void)
+
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Fix (MonadFix)
+import Language.Javascript.JSaddle (MonadJSM)
 import Reflex (
     Reflex(..), MonadSample(..), MonadHold(..)
   , PerformEvent(..), PostBuild(..), TriggerEvent(..), Event
@@ -26,6 +30,7 @@ import Reflex (
   )
 import Reflex.Dom.Core (
     DomBuilder
+  , GhcjsDomSpace, DomBuilderSpace
   --, Prerender(prerender)
   , el, text, elAttr, (=:), blank, divClass
   )
@@ -38,8 +43,11 @@ import Data.Maybe (fromJust)
 import Data.Map (Map, fromList)
 import Data.Time (UTCTime, getCurrentTime)
 import Reflex.Dom.Widget.ECharts (
-    TimeLineChartConfig(..), ChartOptions(..), Series(..), SeriesLine
-  , timeLineChart, series_smooth, series_name
+    TimeLineChartConfig(..), LineChartConfig(..)
+  , ChartOptions(..), Series(..), SeriesLine(..), Chart(..)
+  , Data(DataInt)
+  , timeLineChart, lineChart, series_smooth, series_name, series_areaStyle
+  , axis_type , chartOptions_xAxis, chartOptions_yAxis, AxisType(..), axis_data
   )
 import Data.Time (parseTimeM, defaultTimeLocale)
 
@@ -70,10 +78,20 @@ apiStatWS = do
       return (_webSocket_recv ws)
   return $ fmapMaybe (J.decode . fromStrict) wsRespEv
 
-home :: ( DomBuilder t m, PostBuild t m, Prerender js m, PerformEvent t m, MonadHold t m
-        , TriggerEvent t m
-        ) => m ()
-home = do
+myChart
+  :: ( PostBuild t m
+     , DomBuilder t m
+     , PerformEvent t m
+     , MonadHold t m
+     , GhcjsDomSpace ~ DomBuilderSpace m
+     , TriggerEvent t m
+     , MonadFix m
+     , MonadIO (Performable m)
+     , MonadJSM m
+     , MonadJSM (Performable m)
+     )
+     => m (Chart t)
+myChart = do
   pb <- getPostBuild
   let opts :: ChartOptions = def
   let mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%FT%R" s :: UTCTime
@@ -87,9 +105,53 @@ home = do
                           , 15 :: Int
                           , [(mkTs "2018-01-01T05:03", 2.0 :: Double)] <$ pb))
                      ]
-  prerender blank $  void $ do
-    timeLineChart $ TimeLineChartConfig (600, 400) (constDyn opts) chartData
-  text "hello world"
+  timeLineChart $ TimeLineChartConfig (600, 400) (constDyn opts) chartData
+
+basicLineChart
+  :: ( PostBuild t m
+     , DomBuilder t m
+     , PerformEvent t m
+     , MonadHold t m
+     , GhcjsDomSpace ~ DomBuilderSpace m
+     , TriggerEvent t m
+     , MonadFix m
+     , MonadIO (Performable m)
+     , MonadJSM m
+     , MonadJSM (Performable m)
+     )
+  => m (Chart t)
+basicLineChart = do
+  let xAxisData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  let yAxisData = fromList $ zip xAxisData $ map DataInt $ reverse [820, 932, 901, 934, 1290, 1330, 1320]
+  let yAxisData2 = fromList $ zip xAxisData $ map DataInt $ [820, 932, 901, 934, 1290, 1330, 1320]
+  let basicLineChartOpts :: ChartOptions = def
+        & chartOptions_yAxis .~ (def
+          & axis_type ?~ AxisType_Value
+          ) : []
+        & chartOptions_xAxis .~ (def
+          & axis_type ?~ AxisType_Category
+          & axis_data ?~ (zip xAxisData $ repeat Nothing)
+          ) : []
+  let dd2Series = def
+        & series_smooth ?~ Left True
+        & series_areaStyle ?~ def
+  let chartDataDyn = ((0::Int)  =: (def, (constDyn yAxisData), (constDyn xAxisData)))
+                   <> (1 =: (dd2Series, (constDyn yAxisData2), (constDyn xAxisData)))
+  lineChart (LineChartConfig (600, 400)
+              (constDyn basicLineChartOpts)
+              chartDataDyn
+            )
+
+home :: ( DomBuilder t m, PostBuild t m, Prerender js m, PerformEvent t m, MonadHold t m
+        , TriggerEvent t m
+        ) => m ()
+home = do
+  prerender blank $ elAttr "div" ("style" =: "display: flex; flex-wrap: wrap") $ do
+    text "hello world-1"
+--     void $ elAttr "div" ("style" =: "padding: 50px;") $ myChart
+    void $ elAttr "div" ("style" =: "padding: 50px;") $ basicLineChart
+    text "hello world-3"
+  return ()
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
