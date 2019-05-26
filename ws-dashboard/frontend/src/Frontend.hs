@@ -45,9 +45,12 @@ import Data.Time (UTCTime, getCurrentTime)
 import Reflex.Dom.Widget.ECharts (
     TimeLineChartConfig(..), LineChartConfig(..)
   , ChartOptions(..), Series(..), SeriesLine(..), Chart(..)
-  , Data(DataInt)
-  , timeLineChart, lineChart, series_smooth, series_name, series_areaStyle
-  , axis_type , chartOptions_xAxis, chartOptions_yAxis, AxisType(..), axis_data
+  , Data(DataInt), AxisType(..), Title(..)
+  , timeLineChart, lineChart
+  , series_smooth, series_name, series_areaStyle
+  , chartOptions_title, title_text
+  , chartOptions_xAxis, chartOptions_yAxis
+  , axis_data, axis_type, axis_min, axis_max
   )
 import Data.Time (parseTimeM, defaultTimeLocale)
 
@@ -93,7 +96,15 @@ myChart
      => m (Chart t)
 myChart = do
   pb <- getPostBuild
-  let opts :: ChartOptions = def
+  let opts :: ChartOptions =
+        def & chartOptions_title ?~ (def & title_text ?~ "My-Chart")
+            & chartOptions_xAxis .~ (def & axis_type ?~ AxisType_Time) : []
+            & chartOptions_yAxis .~ (def
+                & axis_type ?~ AxisType_Value
+                & axis_min ?~ Left 0
+                & axis_max ?~ Left 101
+              ) : []
+
   let mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%FT%R" s :: UTCTime
   let chartData = 
           fromList [ ("success"
@@ -148,7 +159,7 @@ home :: ( DomBuilder t m, PostBuild t m, Prerender js m, PerformEvent t m, Monad
 home = do
   prerender blank $ elAttr "div" ("style" =: "display: flex; flex-wrap: wrap") $ do
     text "hello world-1"
---     void $ elAttr "div" ("style" =: "padding: 50px;") $ myChart
+    void $ elAttr "div" ("style" =: "padding: 50px;") $ myChart
     void $ elAttr "div" ("style" =: "padding: 50px;") $ basicLineChart
     text "hello world-3"
   return ()
