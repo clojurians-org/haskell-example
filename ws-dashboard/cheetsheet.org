@@ -1,0 +1,15 @@
+#+BEGIN_SRC bash
+  mkdir -p dep
+  cd dep && git clone https://github.com/obsidiansystems/echarts-jsdom.git && cd ..
+  cd dep && git clone https://github.com/obsidiansystems/reflex-dom-echarts.git && cd ..
+
+  ob thunk pack dep/echarts-jsdom
+  ob thunk pack dep/reflex-dom-echarts
+  [str| packages = {
+          echarts-jsdom = hackGet ./dep/echarts-jsdom ;
+          reflex-dom-echarts = hackGet ./dep/reflex-dom-echarts ;     
+        } ;
+      |]
+
+
+#+END_SRC
