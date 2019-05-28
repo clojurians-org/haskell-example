@@ -17,3 +17,12 @@ instance FromJSON ApiStat where
   parseJSON = genericParseJSON defaultOptions {
       fieldLabelModifier = fromJust . stripPrefix "_apiStat_"
     }
+
+data ChannelMsg = ChannelMsg
+  { _channelMsg_channel :: String
+  , _channelMsg_payload :: String
+  } deriving (Show, Generic)
+instance FromJSON ChannelMsg where
+  parseJSON = genericParseJSON defaultOptions {
+      fieldLabelModifier = fromJust . stripPrefix "_channelMsg_"
+    }

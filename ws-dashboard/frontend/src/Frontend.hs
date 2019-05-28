@@ -91,7 +91,7 @@ apiStatWS = do
       return (_webSocket_recv ws)
   return $ ffor wsRespEv $ \bs -> do
     let lbs = fromStrict bs
-    mapLeft (const (toS lbs)) . J.eitherDecode $ lbs
+    mapLeft (const (toS lbs)) $ (J.eitherDecode lbs >>= J.eitherDecode . toS . _channelMsg_payload)
 
 tickWithSpeedSelector
  :: ( PostBuild t m
