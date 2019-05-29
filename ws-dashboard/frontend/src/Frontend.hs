@@ -5,6 +5,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE QuasiQuotes #-}
 module Frontend where
 
 import Data.Function ((&))
@@ -26,13 +28,16 @@ import Language.Javascript.JSaddle (MonadJSM)
 import Reflex (
     Reflex(..), MonadSample(..), MonadHold(..)
   , PerformEvent(..), PostBuild(..), TriggerEvent(..), Event
-  , never, fmapMaybe, sample, constDyn
+  , never, fmapMaybe, sample, constDyn, ffor
+  , tickLossyFromPostBuildTime, foldDyn
   )
 import Reflex.Dom.Core (
     DomBuilder
-  , GhcjsDomSpace, DomBuilderSpace
+  , GhcjsDomSpace, DomBuilderSpace, TickInfo
   --, Prerender(prerender)
   , el, text, elAttr, (=:), blank, divClass
+  , rangeInput, rangeInputConfig_initialValue, rangeInputConfig_attributes
+  , dyn, dynText, value, switchHold
   )
 import Reflex.Dom.Prerender (Prerender, prerender)
 import Reflex.Dom.WebSocket (webSocket, webSocketConfig_send, RawWebSocket (_webSocket_recv))
@@ -40,6 +45,8 @@ import Obelisk.Route (R)
 import Obelisk.Route.Frontend (subRoute_)
 
 import Data.Maybe (fromJust)
+import Data.Either (fromRight)
+import Data.Either.Combinators (rightToMaybe, mapLeft)
 import Data.Map (Map, fromList)
 import Data.Time (UTCTime, getCurrentTime)
 import Reflex.Dom.Widget.ECharts (
@@ -53,6 +60,8 @@ import Reflex.Dom.Widget.ECharts (
   , axis_data, axis_type, axis_min, axis_max
   )
 import Data.Time (parseTimeM, defaultTimeLocale)
+import Text.Heredoc (str)
+import Data.String.Conv (toS)
 
 import Common.Api
 import Common.Route
@@ -73,14 +82,32 @@ pageHeader = do
 
 apiStatWS :: forall t m js .
           ( DomBuilder t m, Prerender js m, PerformEvent t m, TriggerEvent t m, PostBuild t m)
-          => m (Event t ApiStat)
+          => m (Event t (Either String ApiStat))
 apiStatWS = do
   wsRespEv <-
     prerender (return never) $ do
-      ws <- webSocket "" $ def & webSocketConfig_send .~ (never :: Event t [Text])
+      ws <- webSocket "ws://10.132.37.200:3000/chat/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtb2RlIjoicncifQ.QKGnMJe41OFZcjz_qQSplmWAmVd_hmVjijKUNoJYpis" $
+              def & webSocketConfig_send .~ (never :: Event t [Text])
       return (_webSocket_recv ws)
-  return $ fmapMaybe (J.decode . fromStrict) wsRespEv
+  return $ ffor wsRespEv $ \bs -> do
+    let lbs = fromStrict bs
+    mapLeft (const (toS lbs)) $ (J.eitherDecode lbs >>= J.eitherDecode . toS . _channelMsg_payload)
 
+tickWithSpeedSelector
+ :: ( PostBuild t m
+    , DomBuilder t m
+    , PerformEvent t m
+    , MonadFix m
+    , MonadHold t m
+    , GhcjsDomSpace ~ DomBuilderSpace m
+    , TriggerEvent t m
+    , MonadIO (Performable m)
+    )
+  => m (Event t TickInfo)
+tickWithSpeedSelector = do
+  dyn ((\v -> tickLossyFromPostBuildTime (fromRational $ toRational v)) <$> (constDyn 1))
+    >>= switchHold never
+  
 myChart
   :: ( PostBuild t m
      , DomBuilder t m
@@ -93,75 +120,49 @@ myChart
      , MonadJSM m
      , MonadJSM (Performable m)
      )
-     => m (Chart t)
-myChart = do
-  pb <- getPostBuild
+     => Event t [ApiStat] -> m (Chart t)
+myChart ev  = do
   let opts :: ChartOptions =
         def & chartOptions_title ?~ (def & title_text ?~ "My-Chart")
             & chartOptions_xAxis .~ (def & axis_type ?~ AxisType_Time) : []
-            & chartOptions_yAxis .~ (def
-                & axis_type ?~ AxisType_Value
-                & axis_min ?~ Left 0
-                & axis_max ?~ Left 101
-              ) : []
+            & chartOptions_yAxis .~ (def & axis_type ?~ AxisType_Value) : []
 
-  let mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%FT%R" s :: UTCTime
   let chartData = 
           fromList [ ("success"
                         , ( def & series_smooth ?~ Left True & series_name ?~ "success" :: Series SeriesLine
                           , 15 :: Int
-                          , [(mkTs "2018-01-01T05:03", 1.0 :: Double)] <$ pb))
+                          , ffor ev $ map (\(ApiStat ts succ fail) -> (ts, (fromIntegral succ))) ))
                    , ("fail"
                         , ( def & series_smooth ?~ Left True & series_name ?~ "fail" :: Series SeriesLine
                           , 15 :: Int
-                          , [(mkTs "2018-01-01T05:03", 2.0 :: Double)] <$ pb))
-                     ]
+                          , ffor ev $ map (\(ApiStat ts succ fail) -> (ts, (fromIntegral fail))) )) ]
   timeLineChart $ TimeLineChartConfig (600, 400) (constDyn opts) chartData
 
-basicLineChart
-  :: ( PostBuild t m
-     , DomBuilder t m
-     , PerformEvent t m
-     , MonadHold t m
-     , GhcjsDomSpace ~ DomBuilderSpace m
-     , TriggerEvent t m
-     , MonadFix m
-     , MonadIO (Performable m)
-     , MonadJSM m
-     , MonadJSM (Performable m)
-     )
-  => m (Chart t)
-basicLineChart = do
-  let xAxisData = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-  let yAxisData = fromList $ zip xAxisData $ map DataInt $ reverse [820, 932, 901, 934, 1290, 1330, 1320]
-  let yAxisData2 = fromList $ zip xAxisData $ map DataInt $ [820, 932, 901, 934, 1290, 1330, 1320]
-  let basicLineChartOpts :: ChartOptions = def
-        & chartOptions_yAxis .~ (def
-          & axis_type ?~ AxisType_Value
-          ) : []
-        & chartOptions_xAxis .~ (def
-          & axis_type ?~ AxisType_Category
-          & axis_data ?~ (zip xAxisData $ repeat Nothing)
-          ) : []
-  let dd2Series = def
-        & series_smooth ?~ Left True
-        & series_areaStyle ?~ def
-  let chartDataDyn = ((0::Int)  =: (def, (constDyn yAxisData), (constDyn xAxisData)))
-                   <> (1 =: (dd2Series, (constDyn yAxisData2), (constDyn xAxisData)))
-  lineChart (LineChartConfig (600, 400)
-              (constDyn basicLineChartOpts)
-              chartDataDyn
-            )
+mkTs :: String -> UTCTime
+-- mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%F %R" s
+mkTs s = fromJust $ parseTimeM True defaultTimeLocale "%Y-%m-%d %H:%M %Z" s
 
 home :: ( DomBuilder t m, PostBuild t m, Prerender js m, PerformEvent t m, MonadHold t m
         , TriggerEvent t m
         ) => m ()
 home = do
+    -- pb <- getPostBuild
+
   prerender blank $ elAttr "div" ("style" =: "display: flex; flex-wrap: wrap") $ do
-    text "hello world-1"
-    void $ elAttr "div" ("style" =: "padding: 50px;") $ myChart
-    void $ elAttr "div" ("style" =: "padding: 50px;") $ basicLineChart
-    text "hello world-3"
+    void $ elAttr "div" ("style" =: "padding: 50px;") $ do
+{--
+      tickE <- tickWithSpeedSelector
+      myChart ([ ApiStat (mkTs "2018-01-01 05:04 +0000") 1 5
+               , ApiStat (mkTs "2018-01-01 05:05 +0000") 3 2
+--               , ApiStat (mkTs "2018-01-01T05:06") 4.0 3.0
+               ] <$ tickE)
+--}
+      wsE <- apiStatWS
+      msg <- foldDyn (\m ms -> toS (show m)) "" wsE
+      dynText ("MSG:" <> msg)
+
+      let ev = fmapMaybe rightToMaybe wsE
+      myChart (fmap (:[]) ev)
   return ()
 
 frontend :: Frontend (R FrontendRoute)
@@ -172,3 +173,8 @@ frontend = Frontend
         FrontendRoute_Ping -> text "pong"
         FrontendRoute_Home -> home
   }
+
+repl :: IO ()
+repl = do
+  let apiJson = [str|{"ts":"2018-03-01 01:01 +0000","success_num":3,"fail_num":2}|]
+  print (J.eitherDecode apiJson :: Either String ApiStat)

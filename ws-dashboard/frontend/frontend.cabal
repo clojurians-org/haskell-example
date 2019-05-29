@@ -13,6 +13,9 @@ library
                , obelisk-generated-static
                , text
                , reflex-dom-echarts
+               , heredoc
+               , string-conv
+               , either
   exposed-modules:
     Frontend
   ghc-options: -Wall
