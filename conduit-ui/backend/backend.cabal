@@ -1,0 +1,60 @@
+name: backend
+version: 0.1
+cabal-version: >= 1.8
+build-type: Simple
+
+library
+  hs-source-dirs: src
+  if impl(ghcjs)
+    buildable: False
+  build-depends: 
+      base
+    , common
+    , frontend
+    , obelisk-backend
+    , obelisk-route
+
+    , bytestring
+    , either
+    , text
+    , string-conversions
+    , heredoc
+    , template-haskell
+    , aeson
+    , labels
+    , labels-json
+    , transformers
+    , resourcet
+    , conduit
+    , hint
+    , hasql
+    , stm-chans
+    , stm-conduit
+    , unliftio
+    , snap-core
+    , snap-server
+    , snap
+    , websockets-snap
+
+  exposed-modules:
+    Backend
+  ghc-options: -Wall
+  default-extensions:
+      NoImplicitPrelude
+    , OverloadedStrings
+    , OverloadedLabels
+    , TemplateHaskell
+    , TypeApplications
+    , QuasiQuotes
+
+
+executable backend
+  main-is: main.hs
+  hs-source-dirs: src-bin
+  if impl(ghcjs)
+    buildable: False
+  build-depends: base
+               , backend
+               , common
+               , frontend
+               , obelisk-backend

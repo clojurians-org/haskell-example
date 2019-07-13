@@ -1,0 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+module Lib
+    ( someFunc
+    ) where
+
+import Data.ByteString.Lazy (fromStrict)
+import Data.ByteString.Base64 (decodeLenient)
+import Codec.Compression.GZip (decompress)
+
+import FFI.CKafka
+
+someFunc :: IO ()
+someFunc = putStrLn rdKafkaVersionStr
+
+
+{--
+  decompress . fromStrict . decodeLenient $ "H4sIAAAAAAAAALVWXU/jMBB8Pn6FVV4PZLtJmyD1wee4TaQkjmwXhBCKekfEVQofgnInhPrfz4FyJdgFTMk+JZI1szs76zXEu993EYaov4fwHob6D8PwwPMPMAKeh/R/SK8urq9u54sqmi1m4GEH6OiRoihjRqLetwNgO7B8Ohbxo7wkQpDj5iC5uZndgxN0ujrUBNwA8Bw9Qqkqf5C0ARjPq/oMPACwuL+uRo9/Sn+dnF3d/ayrUwDq6vJ88XuE+gDc/prV1QghAP7M6rtqBB7wfhiEIQz7PmbhcpXiKx5Bchq/RXW7uJlfnq+p/jPBNZEPkR1+nJKJCziygG+AzrkTcGBPGyLkD6EOFPp4YFJ1pw+NiZiwkmTKpdHrPq/R4b5vonPByogo5pK6TaNmVBDCAzuDYGPHRtg4IIZ9OER9g4N9TiTPIhKC+9DAz+SkTCKWq2ScMOFShmcrI0QmBS+YIIo7gQ82eDUIDPhCcMqkLCmPnFpto8ADGEKzAvceW4dNGwlBX5tpEGLsIx0WJlnwXDLnarCtG2Yl8liWZKyYcKzHJhYM4CA0p+JIakNtOw8Bgo/xEn35csuknJL0zXW00lNt2kJNvLeJnjG+xFxmRS0KPYkuDEMLg5zSZhReU2yQsPHCuwLqpS/KqdSGcWsqtKR3eVfXL3PrkamKv2RBZiZsQaQ84qKjpLtS5GnZOiJb9217l/QiJlWSE5XwfFuxqQG8ekM53ikfEiTTfiYT9/vQup30E8cKro6LrcHRq9nuZTyapsyxlbZrPCpauHrfTQTJunCfYIdMSH2vKt1PZ1U+RKHn5rCb0WmQE+ruFGQbH3koyrGel5wmJG3T8KnQLN05fkXgqr7NOZlqIatY6OveMWdsnyQYer5+s3qB58GLKp73h3+zbNima0zk3A0Lm2fCduLNT1zqH3unPiGnJN96w9M4yZlkLfBOHlzLneXOPwNvhhYqEAAA"
+--}

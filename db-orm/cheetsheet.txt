@@ -1,0 +1,3 @@
+nix-shell -p cabal-install --run "cabal init"
+nix-shell --run "cabal new-update"
+nix-shell --run "cabal new-repl"

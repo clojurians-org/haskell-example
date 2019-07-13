@@ -1,0 +1,531 @@
+#+STARTUP: showall
+* HASKELL 最佳实践
+
+本人在使用过程中，会整理出haskell的学习资料，以便大家更好的学习。
+欢迎大家fork并提交PR!
+
+** HASKELL :> 电子书
+  - [新手入门-兴趣] Learn You a Haskell for Great Good! A Beginner's Guide 
+  #+BEGIN_QUOTE
+    此书过于基础，适合函数式概念入门，不具备工程开发能力，适合haskell零基础爱好者兴趣培养
+  #+END_QUOTE
+  - [新手入门-进阶] Haskell Programming from first principle
+  #+BEGIN_QUOTE
+    此书把简单的东西讲得太细致，能提供较好的haskell基础知识, 适合haskell专业开发者入门指引
+  #+END_QUOTE
+  - [基础开发] Real World Haskell [http://book.realworldhaskell.org/read/]
+  #+BEGIN_QUOTE
+    此书具备一定难度，且知识面较为全面，适合具有haskell基础的人员深入理解学习
+  #+END_QUOTE
+  - [专业技能] parallel and concurrency programming in haskell
+  #+BEGIN_QUOTE
+    此书由haskell核心库高并发专家编写，知识体系非常完整，讲解得深入浅出
+  #+END_QUOTE
+
+** HASKELL :>  技术文章
+  + haskell培训教程
+    - Applied Haskell https://haskell.fpcomplete.com/syllabus
+  + Monad连接器:
+    - 博客: https://www.jianshu.com/p/e0f710b3cd4c
+  + CSP技术
+    - 库源码学习: https://www.jianshu.com/p/694e95dc390c
+  + 类型系统:
+    - 博客[未完成]：https://www.jianshu.com/p/ae3ed9c4870b
+  + TypeClass :
+    - 视频: https://www.bilibili.com/video/av40042989
+  + Template Haskell
+    - 博客: https://markkarpov.com/tutorial/th.html
+    - 博客: https://wiki.haskell.org/Template_Haskell
+    - 库源码学习: [persistent, aeson, lens]
+  + FRP技术
+    - 理论: https://blog.qfpl.io/projects/reflex/
+    - 实战: https://github.com/hansroland/reflex-dom-inbits/blob/master/tutorial.md
+  + 实时流技术Conduit
+    - 源码分析: https://www.jianshu.com/p/65e75b0edbaa
+  + 复合解析技术parsec
+    - 源码分析: https://www.jianshu.com/p/595983904a57
+  + 高并发STM
+    - 源码分析: https://www.jianshu.com/p/cd2514ee27bc
+  + 全栈开发[servant+reflex]
+    - https://jappieklooster.nl/fullstack-haskell-reflex-and-servant.html
+    - https://jappieklooster.nl/authentication-in-reflex-servant.html
+  + web开发系列
+    - servant + persistent: [https://www.parsonsmatt.org/2016/07/08/servant-persistent_updated.html]
+  + 静态构建
+    - static-haskell-nix: https://vaibhavsagar.com/blog/2018/01/03/static-haskell-nix/
+  + GHC底层知识
+    - PrimMonad: https://www.fpcomplete.com/blog/2015/02/primitive-haskell
+    - 执行顺序: https://wiki.haskell.org/Evaluation_order_and_state_tokens
+
+** HASKELL :> 开发工具
+  + emacs dante :> [nix + cabal] <> [obelisk]
+    - emacs dante [https://github.com/jyp/dante]
+    - nix + cabal 配置 [https://github.com/Gabriel439/haskell-nix]
+    - obelisk [https://github.com/obsidiansystems/obelisk]
+  + static linking
+    - static-haskell-nix [https://github.com/nh2/static-haskell-nix]
+  
+
+** HASKELL :> 全栈开发
+  - C FFI [https://github.com/ghc/ghc]
+  #+BEGIN_QUOTE
+    ghc: 原生大本营, 非常好玩
+  #+END_QUOTE
+  - JS FFI [https://github.com/ghcjs/ghcjs]
+  #+BEGIN_QUOTE
+    ghcjs: 有着强大的FRP支撑, 以reflex最为知名, 大部分项目需要配合nix使用
+  #+END_QUOTE
+  - JVM FFI [https://github.com/eta-lang]
+  #+BEGIN_QUOTE
+    eta-lang: 
+    当前不支持GHC 8, 使用NIX会比较麻烦; 
+    对于Maybe类型的nullable object尚不支持; 
+    使用过程中须使用progurad减少文件size，编译过程较慢; 
+    HDBC及其底层的数据库尚未完全支持，使用友好度不够
+  #+END_QUOTE
+
+** HASKELL :> 知名工具
+  - pandoc [https://github.com/jgm/pandoc]
+  #+BEGIN_QUOTE
+    文档格式转换任意转换[org-mode/pdf/markdown/docx/TeX ...]
+  #+END_QUOTE
+  - gitit2 [https://github.com/jgm/gitit2]
+  #+BEGIN_QUOTE
+    WIKI文档服务器: 轻松一键安装，零依赖[nix-env -f '<nixpkgs>' -iA haskellPackages.gitit]
+  #+END_QUOTE
+  - hakyll [https://github.com/jaspervdj/hakyll]
+  #+BEGIN_QUOTE
+    搭建静态博客网站
+  #+END_QUOTE
+  - Haxl [https://github.com/facebook/Haxl]
+  #+BEGIN_QUOTE
+    facebook出品，用于大规模反垃圾邮件策略
+  #+END_QUOTE
+  - queryparser [https://github.com/uber/queryparser]
+  #+BEGIN_QUOTE
+    uber出品, 数据仓库血缘分析工具, 支持vertica|HIVE|presto
+  #+END_QUOTE
+  - patat [https://github.com/jaspervdj/patat]
+  #+BEGIN_QUOTE
+    命令行模式PPT演示
+  #+END_QUOTE
+  - postgREST [https://github.com/PostgREST/postgrest]
+  #+BEGIN_QUOTE
+    非常厉害的postgresql restful api服务
+  #+END_QUOTE
+  - hnix [https://github.com/haskell-nix/hnix]
+  #+BEGIN_QUOTE
+    nix的haskell实现版本，方便用于测试集成
+  #+END_QUOTE
+  - graphql-engine/server [https://github.com/hasura/graphql-engine/tree/master/server]
+  #+BEGIN_QUOTE
+    GraphQL on postgresql横空出世  
+  #+END_QUOTE
+  - cardano [https://github.com/input-output-hk/cardano-sl]
+  #+BEGIN_QUOTE
+    haskell实现的区块链项目
+  #+END_QUOTE  
+  - dhall [https://github.com/dhall-lang/dhall-haskell]
+  #+BEGIN_QUOTE
+    haskell实现的配置编程语言
+  #+END_QUOTE
+  - haskell-webshell [https://github.com/lehins/haskell-webshell]
+  #+BEGIN_QUOTE
+    通用网页实现的shell终端
+  #+END_QUOTE
+  - matterhorn [https://github.com/matterhorn-chat/matterhorn]
+  #+BEGIN_QUOTE                                                                                                                                                           
+    Mattermost 命令行聊天工具[https://github.com/mattermost/mattermost-server]
+  #+END_QUOTE                                                                                                                                                             
+
+** HASKELL :> 数据格式解析
+  + JSON 系列
+    - aeson
+    #+BEGIN_QUOTE
+      当前不支持非严格json解析，例如单引号或者key不含引号，可以改写低层库很方便实现
+    #+END_QUOTE
+    - aeson-pretty
+    - aeson-qq
+    #+BEGIN_QUOTE
+      aeson quasiquoter支持
+    #+END_QUOTE
+    - lens-aeson [https://github.com/lens/lens-aeson]
+    #+BEGIN_QUOTE                                                                                                              
+      aeson的lens操作库
+    #+END_QUOTE                                                                                                                
+  - YAML =: yaml
+  #+BEGIN_QUOTE
+    可以很容易与aeson集成
+  #+END_QUOTE
+  - CSV =: cassava
+  - EXCEL =: xlsx
+  #+BEGIN_QUOTE
+    性能强悍，大量使用lens操作
+  #+END_QUOTE
+  - SHELL =: optparse-applicative
+  #+BEGIN_QUOTE                                                                                                                                                           
+    行业标准的命令行参数解析库
+  #+END_QUOTE                                                                                                                                                             
+
+** HASKELL :> 通用格式解析器
+  - parsec 
+  #+BEGIN_QUOTE
+    GHC核心自带解析器，性能较弱
+  #+END_QUOTE
+  - attoparsec
+  #+BEGIN_QUOTE
+    网络字节解析器，性能强悍，错误提示较差
+  #+END_QUOTE
+  - megaparsec
+  #+BEGIN_QUOTE
+    parsec的性能增强版本
+  #+END_QUOTE
+
+** HASKELL :> 数据分析  
+  - Chart [https://github.com/timbod7/haskell-chart]
+  #+BEGIN_QUOTE
+    画图工具
+  #+END_QUOTE
+  - staticstics [https://github.com/bos/statistics]
+  #+BEGIN_QUOTE
+    统计分析
+  #+END_QUOTE
+  - Frames [https://github.com/acowley/Frames]
+  #+BEGIN_QUOTE
+    类似python的pandas
+  #+END_QUOTE
+  - HMatrix [https://github.com/haskell-numerics/hmatrix]
+  #+BEGIN_QUOTE
+    矩阵计算, 类似python的numpy
+  #+END_QUOTE
+  - mltool [https://github.com/aligusnet/mltool]
+  #+BEGIN_QUOTE
+    机器学习库
+  #+END_QUOTE
+  - HLearn [https://github.com/mikeizbicki/HLearn]
+  #+BEGIN_QUOTE
+    机器学习[KNN]
+  #+END_QUOTE
+  - Tensorflow [https://github.com/tensorflow/haskell]
+  #+BEGIN_QUOTE
+    Tensorflow haskell绑定
+  #+END_QUOTE
+  - Haskell AI [https://github.com/chris-taylor/aima-haskell]
+  #+BEGIN_QUOTE
+    HASKELL AI代码实现: ficial Intelligence: A Modern Approach
+  #+END_QUOTE
+
+
+** HASKELL :> 命令行开发
+  - brick
+  #+BEGIN_QUOTE    
+    控制台图形显示库
+  #+END_QUOTE
+
+** HASKELL :> 前端开发
+  - reflex 及 reflex-dom
+  #+BEGIN_QUOTE
+    FRP核心库
+  #+END_QUOTE
+  - reflex-semantic
+  #+BEGIN_QUOTE
+    reflex UI库
+  #+END_QUOTE
+  - obelisk
+  #+BEGIN_QUOTE
+    reflex构建工具与开发框架
+  #+END_QUOTE
+
+** HASKELL :> WEB开发框架
+  + 基础数据结构
+    - http-types
+    - cookie
+  + wai 底层WEB服务[Haskell Web Application Interface]
+    - wai
+    - wai-extra
+    - wai-app-static
+  + websockets 系列
+    - websockets [https://github.com/jaspervdj/websockets]
+    - wai-websockets [https://github.com/yesodweb/wai/tree/master/wai-websockets]
+  + servant 系列
+    - servant-server
+    #+BEGIN_QUOTE
+      restful服务开发, 对xml的支持需要自己添加
+    #+END_QUOTE
+    - servant-auth
+    #+BEGIN_QUOTE
+      JWT及cookie验证
+    #+END_QUOTE
+    - servant-client
+    #+BEGIN_QUOTE
+      生成后端api调用代码
+    #+END_QUOTE
+    - servant-reflex
+    #+BEGIN_QUOTE
+      生成reflex前端api调用代码
+    #+END_QUOTE
+    - servant-swagger
+    #+BEGIN_QUOTE
+      servant swagger文档库
+    #+END_QUOTE
+  + snap 系列
+    - snap-server
+    #+BEGIN_QUOTE                                                                                                                                                         
+      轻量级高性能WEB服务器
+    #+END_QUOTE                                                                                                                                                           
+  + Yesod 系列
+    - yesod-core
+    - yesod
+    - yesod-form
+    - yesod-static
+
+** HASKELL :> 数据访问层
+  + acid-state [https://github.com/acid-state/acid-state]
+  + haskey [https://github.com/haskell-haskey/haskey]
+  + amqp [https://github.com/hreinhardt/amqp]
+  + postgresql 
+    - hasql
+    #+BEGIN_QUOTE
+      采用二进制协议, 带来野兽版的性能
+    #+END_QUOTE
+    - hasql-pool
+    #+BEGIN_QUOTE
+      resource-pool的简易封装版本
+    #+END_QUOTE
+    - postgresql-simple
+    - postgresql-websockets + pg-recorder [https://github.com/diogob/postgres-websockets]
+    #+BEGIN_QUOTE
+       postgresql-websockets将notify消息接口转为websocket; pg-recorder用于将websocket接口写入数据库
+    #+END_QUOTE
+  + mysql =: mysql-simple
+  + SQL Server =: tds
+  + oracle =: odpic-raw
+  #+BEGIN_QUOTE
+    oracle使用最简单的库, blob支持需要自己添加
+  #+END_QUOTE
+  + ORM & DSL 
+    - persistent+Esqueleto
+    - groundhog [https://github.com/lykahb/groundhog]
+  + MIGRATION
+    - dbmigrations [https://github.com/jtdaugherty/dbmigrations]
+
+
+** HASKELL :> 字节编码库
+  - base64-bytestring
+  - utf8-bytestring
+  - jose-jwt [https://github.com/tekul/jose-jwt]
+  #+BEGIN_QUOTE
+    JWT TOKEN
+  #+END_QUOTE
+  - cryptonite
+  #+BEGIN_QUOTE
+    haskell业界标准加密库
+  #+END_QUOTE
+  - cereal [https://github.com/GaloisInc/cereal]
+  #+BEGIN_QUOTE                                                                                                                
+    网络序列化库
+  #+END_QUOTE                                                                                                                  
+
+
+** HASKELL :> 数据处理框架
+  - conduit 
+  #+BEGIN_QUOTE
+    单机史上最强实时处理技术
+  #+END_QUOTE
+  - lens
+  #+BEGIN_QUOTE
+    多层级数据遍历组合处理库
+  #+END_QUOTE
+  - fgl [https://github.com/haskell/fgl]
+  #+BEGIN_QUOTE
+    图算法库
+  #+END_QUOTE
+  - QuickCheck
+  #+BEGIN_QUOTE                                                                                                                                                           
+    使用Generator自动造数，非常好用
+  #+END_QUOTE                                                                                                                                                             
+  - split
+  #+BEGIN_QUOTE
+    list切割工具
+  #+END_QUOTE
+  
+** HASKELL :> 大数据处理技术
+  - hw-kafka-conduit
+  #+BEGIN_QUOTE
+    conduit在kafka平台上运行
+  #+END_QUOTE
+  - sparkle [https://github.com/tweag/sparkle]
+  - minio-hs
+  - eta-spark [https://github.com/typelead/eta-examples/tree/master/3-spark]
+  - tensorflow [https://github.com/tensorflow/haskell]
+
+
+** HASKELL :> 高并行并发框架
+  + 并行库系列
+    - parallel
+    #+BEGIN_QUOTE
+      快捷版本并行库
+    #+END_QUOTE
+    - monad-par 并行库
+    #+BEGIN_QUOTE
+      灵活定制版本并行库
+    #+END_QUOTE
+  + STM-高并发系列
+    - stm [https://github.com/ghc/ghc/blob/master/libraries/base/GHC/Conc/Sync.hs]
+    #+BEGIN_QUOTE
+      系统自带并发库
+    #+END_QUOTE
+    - stm-hamt [https://github.com/nikita-volkov/stm-hamt]
+    - stm-containers [https://github.com/nikita-volkov/stm-containers]
+    - stm-chans
+    - stm-conduit
+    - TCache
+  + ACTOR-高并发系列
+    distribute-process
+    #+BEGIN_QUOTE
+      分布式并发库
+    #+END_QUOTE
+  + CSP-高并发系列
+
+
+** HASKELL :> 网络传输工具
+  + network [https://github.com/haskell/network]
+  + FTP
+    - ftp-client [https://github.com/mr/ftp-client]
+  + SSH/SFTP
+    - libssh2
+  + HTTP/HTTPS
+    - http-client
+    - http-client-tls
+  + EMAIL
+    - hsemail [https://github.com/peti/hsemail]
+
+
+** HASKELL :> 运行时动态加载
+  - hint
+  #+BEGIN_QUOTE
+    动态运行时加载
+  #+END_QUOTE
+
+
+** HASKELL :> 脚本工具
+  - Haskell-Turtle-Library
+  #+BEGIN_QUOTE
+    简洁版脚本工具
+  #+END_QUOTE
+  - Shelly
+  #+BEGIN_QUOTE
+    灵活版脚本工具
+  #+END_QUOTE
+
+
+** HASKELL :> 杀手级技能
+  - template haskell [https://github.com/ghc/ghc/tree/master/libraries/template-haskell]
+
+
+** HASKELL :> 通用monad工具库
+  - transformers <> mtl [http://hub.darcs.net/ross/transformers]
+  #+BEGIN_QUOTE
+    快速连接不同类型的monad世界
+  #+END_QUOTE
+  - async [https://github.com/simonmar/async]
+  - unliftio [https://github.com/fpco/unliftio]
+  - resource-pool <> resourcet 
+  #+BEGIN_QUOTE                                                                                                               $
+    monad 资源管理
+  #+END_QUOTE                                                                                                                 $
+  - monad-loops <> retry
+  #+BEGIN_QUOTE                                                                                                                  
+    monad 流程控制[循环<>重试]
+  #+END_QUOTE                                                                                                                                                             
+  - contravariant
+  - comonad
+  - profunctors
+  - bifunctor
+  - either
+  - free
+  - tagged
+  - categories
+  - semigroups
+  - semigroupoids
+  - rounded
+  - monad-coroutine
+  - monad-control
+  - primitive
+
+** HASKELL :> 基础数据结构
+  - either
+  - bytestring
+  - text
+  - case-insensitive
+  - string-conv
+  #+BEGIN_QUOTE
+    string/bytestring/text自由转换
+  #+END_QUOTE
+  - scientific
+  - array
+  - vector
+  - containers
+  - unorderded-containers
+  - deepseq
+  #+BEGIN_QUOTE                                                                                                                
+    完全strict实例化数据结构
+  #+END_QUOTE                                                                                                                  
+
+
+** HASKELL :> 系统工具库
+  - optparse-applicative [https://github.com/pcapriotti/optparse-applicative]
+  - envparse [https://github.com/tel/env-parser]
+  - time
+  - random
+  - Glob
+  - filepath
+  - directory
+  - monad-logger
+  - configurator [https://github.com/bos/configurator]
+  - cron [https://github.com/michaelxavier/cron]
+
+
+** HASKELL :> 底层开发
+  - c2hs
+  #+BEGIN_QUOTE
+    生成c库调用绑定
+  #+END_QUOTE
+  - call-haskell-from-anything
+  #+BEGIN_QUOTE
+    任意语言调用haskell
+    https://github.com/nh2/call-haskell-from-anything
+  #+END_QUOTE
+
+
+** HASKELL :> 监控利器
+  - prometheus [https://github.com/bitnomial/prometheus]
+  - ekg [https://github.com/tibbe/ekg]
+  - ekg-statsd [https://github.com/tibbe/ekg-statsd]
+
+
+** HASKELL :> 测试库
+  - criterion + criterion-measurement
+  #+BEGIN_QUOTE
+    业界标准性能测试库
+  #+END_QUOTE
+  - QuickCheck
+  #+BEGIN_QUOTE                                                                                                                                                           
+    property-based的haskell随机测试库
+  #+END_QUOTE                                                                                                                                                             
+  - HUnit
+  #+BEGIN_QUOTE
+    haskell基础测试库
+  #+END_QUOTE
+  - hspec
+  - hedgehog
+  - tasty
+  #+BEGIN_QUOTE
+    一站式测试解决方案
+  #+END_QUOTE
+
+
+** HASKELL :>  其它常用库[待整理]
+  - dependent-map
+  - dependent-sum
+  - rio

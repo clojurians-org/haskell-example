@@ -1,0 +1,79 @@
+-- This file has been generated from package.yaml by hpack version 0.28.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 8faf7d13a33b3167dcccf0259c569c6280fa0340fc66c1f3a9a4662e25af80bf
+
+name:           rest-api
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/rest-api#readme>
+homepage:       https://github.com/githubuser/rest-api#readme
+bug-reports:    https://github.com/githubuser/rest-api/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2018 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/rest-api
+
+library
+  exposed-modules:
+      Lib
+  other-modules:
+      Paths_rest_api
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , text
+    , aeson
+    , lens
+    , file-embed-lzma
+    , neat-interpolation
+    , wai
+    , warp
+    , warp-tls
+    , servant
+    , servant-server
+    , servant-generic
+    , swagger2
+    , servant-swagger
+    , servant-swagger-ui
+    , servant-swagger-ui-core
+    , servant-swagger-ui-redoc
+  default-language: Haskell2010
+  ghc-options: -fshow-loaded-modules -ferror-spans
+
+executable rest-api-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_rest_api
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , rest-api
+  default-language: Haskell2010
+
+test-suite rest-api-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_rest_api
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , rest-api
+  default-language: Haskell2010
