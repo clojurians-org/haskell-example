@@ -8,7 +8,7 @@
   }
 }:
 with obelisk;
-project ./. ({ hackGet, ... }: {
+project ./. ({ pkgs, hackGet, ... }: {
   android.applicationId = "systems.obsidian.obelisk.examples.minimal";
   android.displayName = "Obelisk Minimal Example";
   ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
@@ -16,5 +16,33 @@ project ./. ({ hackGet, ... }: {
 
   packages = {
     labels-json = hackGet ./dep/labels-json ;
+  } ;
+  overrides = self: super: {
+    # servant-snap = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak super.servant-snap);
+    servant = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant"
+      (pkgs.fetchFromGitHub {
+        owner = "haskell-servant" ;
+        repo = "servant" ;
+        rev = "d4289931ad69f1233c9f75f230f7bb29650df433" ;
+        sha256 = "019w6h695vi83hsncrqvkf9ykg8zidwn4z1aaf2wz48n39hcizwc" ;} + /servant)
+      {})) ;
+
+    servant-server = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant-server"
+      (pkgs.fetchFromGitHub {
+        owner = "haskell-servant" ;
+        repo = "servant" ;
+        rev = "d4289931ad69f1233c9f75f230f7bb29650df433" ;
+        sha256 = "019w6h695vi83hsncrqvkf9ykg8zidwn4z1aaf2wz48n39hcizwc" ;} + /servant-server)
+      {})) ;
+
+    servant-snap = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant-snap"
+      (pkgs.fetchFromGitHub {
+        owner = "haskell-servant" ;
+        repo = "servant-snap" ;
+        rev = "5ed901641c99519fa3e0c701cb430dbb8f6f1b5c" ;
+        sha256 = "01w5b4syq775d5pq04cbclvq58wgpimqc22pwkq54yhynmvh7rpq" ;}) 
+      {})) ;
+
+    # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;
 })

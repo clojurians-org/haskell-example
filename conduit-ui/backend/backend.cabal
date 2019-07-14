@@ -34,15 +34,17 @@ library
     , snap-core
     , snap-server
     , snap
+    , servant-snap
     , websockets-snap
 
   exposed-modules:
     Backend
   ghc-options: -Wall
   default-extensions:
-      NoImplicitPrelude
-    , OverloadedStrings
+      OverloadedStrings
     , OverloadedLabels
+    , GADTs
+    , TypeOperators
     , TemplateHaskell
     , TypeApplications
     , QuasiQuotes
