@@ -18,7 +18,6 @@ project ./. ({ pkgs, hackGet, ... }: {
     labels-json = hackGet ./dep/labels-json ;
   } ;
   overrides = self: super: {
-    # servant-snap = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak super.servant-snap);
     servant = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant"
       (pkgs.fetchFromGitHub {
         owner = "haskell-servant" ;
@@ -42,6 +41,14 @@ project ./. ({ pkgs, hackGet, ... }: {
         rev = "5ed901641c99519fa3e0c701cb430dbb8f6f1b5c" ;
         sha256 = "01w5b4syq775d5pq04cbclvq58wgpimqc22pwkq54yhynmvh7rpq" ;}) 
       {})) ;
+
+    semantic-reflex = pkgs.haskell.lib.dontHaddock (pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "semantic-reflex"
+      (pkgs.fetchFromGitHub {
+        owner = "tomsmalley" ;
+        repo = "semantic-reflex" ;
+        rev = "a354fda1f34d06b72fd99dea1206606b5210ecdd" ;
+        sha256 = "1li8w95ibq4xm717clz5wz23kdp15j9vrqb1kq64d5ld0fjx7ln0" ;} + /semantic-reflex)
+      {}))) ;
 
     # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;

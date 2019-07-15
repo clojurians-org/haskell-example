@@ -12,6 +12,7 @@ library
                , reflex-dom
                , obelisk-generated-static
                , text
+               , semantic-reflex
   exposed-modules:
     Frontend
   ghc-options: -Wall
