@@ -15,11 +15,11 @@ import Obelisk.Backend
 import Fn
 import Control.Exception (finally)
 import Control.Monad (forever)
-import Control.Monad.IO.Class (liftIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
 
 import qualified Data.ByteString as B (ByteString)
-import Data.Text (Text)
+import qualified Data.Text as T
 import Data.List (unlines, lines)
 
 import Data.Proxy (Proxy(..))
@@ -36,6 +36,8 @@ import qualified Language.Haskell.Interpreter as I
 import Data.Conduit (runConduit, yield, (.|))
 import qualified Data.Conduit.Combinators as C
 
+import Data.String.Conversions (cs)
+
 type MyAPI = "api" :> "ping" :> Get '[PlainText] String
 myAPI :: Snap String
 myAPI = return "pong\n"
@@ -45,8 +47,9 @@ wsConduitApp pending= do
   conn <- WS.acceptRequest pending
   runConduit
     $ (forever $ liftIO (WS.receiveData conn) >>= yield)
-   .| C.map (id @Text)
-   .| C.mapM_ (WS.sendTextData conn)
+   .| C.map (id @T.Text)
+   .| C.mapM (I.runInterpreter . dynHaskell)
+   .| C.mapM_ (WS.sendTextData conn . (id @T.Text . cs . show))
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
@@ -60,47 +63,12 @@ backend = Backend
   , _backend_routeEncoder = backendRouteEncoder
   }
 
-repl :: IO ()
-repl = do
-  let stmt = unlines [
-          "do"
-        , "  let sql = [str|select"
-        , "                |  id, name, description, 'type'"
-        , "                |, state, timeliness, params, result_plugin_type"
-        , "                |, vendor_id, server_id, success_code"
-        , "                |from tb_interface"
-        , "                |] :: B.ByteString"
-        , "  let pgSettings = H.settings \"10.132.37.200\" 5432 \"monitor\" \"monitor\" \"monitor\""
-        , "  let (curName, cursorSize, chanSize) = (\"larluo\", 200, 1000)"
-        , "  let textColumn = HD.column HD.text"
-        , "  let mkRow = (,,,,,,,,,,)"
-        , "                <$> fmap (#id :=) textColumn"
-        , "                <*> fmap (#name :=) textColumn"
-        , "                <*> fmap (#description :=) textColumn"
-        , "                <*> fmap (#type :=) textColumn"
-        , "                <*> fmap (#state :=) textColumn"
-        , "                <*> fmap (#timeliness :=) textColumn"
-        , "                <*> fmap (#params :=) textColumn"
-        , "                <*> fmap (#result_plugin_type :=) textColumn"
-        , "                <*> fmap (#vendor_id :=) textColumn"
-        , "                <*> fmap (#server_id :=) textColumn"
-        , "                <*> fmap (#success_code :=) textColumn"
-        , "  Right connection <- liftIO $ H.acquire pgSettings"
-        , "  runResourceT $ do"
-        , "    chan <- pgToChan connection sql curName cursorSize chanSize mkRow"
-        , "    runConduit $"
-        , "      (sourceTBMChan chan"
-        , "            .| C.concat"
-        , "            .| C.take 2"
-        , "            .| C.mapM_ (liftIO . print))"
-        ]
-
-  r <- I.runInterpreter $ do
-    I.loadModules ["backend/src/Fn.hs" ]
-    I.setTopLevelModules ["Fn"]
-    I.set [I.languageExtensions I.:= [ I.OverloadedStrings
-                                     , I.OverloadedLabels
-                                     , I.TemplateHaskell
-                                     , I.QuasiQuotes]]
-    I.runStmt stmt
-  print r
+dynHaskell :: T.Text -> I.Interpreter ()
+dynHaskell stmt = do
+  I.loadModules ["backend/src/Fn.hs" ]
+  I.setTopLevelModules ["Fn"]
+  I.set [I.languageExtensions I.:= [ I.OverloadedStrings
+                                   , I.OverloadedLabels
+                                   , I.TemplateHaskell
+                                   , I.QuasiQuotes]]
+  I.runStmt (cs stmt)

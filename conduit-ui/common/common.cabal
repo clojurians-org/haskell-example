@@ -12,6 +12,7 @@ library
   default-extensions:
     TypeFamilies
     PolyKinds
+    GADTs
   exposed-modules:
     Common.Api
     Common.Route
