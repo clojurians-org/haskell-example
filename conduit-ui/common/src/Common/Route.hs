@@ -45,7 +45,16 @@ deriving instance Show (APIRoute a)
 
 data FrontendRoute :: * -> * where
   FrontendRoute_Main :: FrontendRoute ()
+  FrontendRoute_EventSource :: FrontendRoute (Maybe (R EventSourceRoute))
+  FrontendRoute_DataSource :: FrontendRoute ()
+  FrontendRoute_StateSource :: FrontendRoute ()
+
+data EventSourceRoute :: * -> * where
+  EventSourceRoute_CronExpr :: EventSourceRoute ()
+  EventSourceRoute_LocalFileWatcher :: EventSourceRoute ()
+  EventSourceRoute_HDFSFileWatcher :: EventSourceRoute ()    
   -- This type is used to define frontend routes, i.e. ones for which the backend will serve the frontend.
+
 
 backendRouteEncoder
   :: Encoder (Either Text) Identity (R (Sum BackendRoute (ObeliskRoute FrontendRoute))) PageName
@@ -61,6 +70,12 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       -- The encoder given to PathEnd determines how to parse query parameters,
       -- in this example, we have none, so we insist on it.
       FrontendRoute_Main -> PathEnd $ unitEncoder mempty
+      FrontendRoute_EventSource -> PathSegment "eventSource" $
+        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
+          EventSourceRoute_CronExpr -> PathSegment "cronExpr" $ unitEncoder mempty
+          EventSourceRoute_LocalFileWatcher -> PathSegment "localFileWatcher" $ unitEncoder mempty
+          EventSourceRoute_HDFSFileWatcher -> PathSegment "hdfsFileWatcher" $ unitEncoder mempty
+          
 
 
 concat <$> mapM deriveRouteComponent

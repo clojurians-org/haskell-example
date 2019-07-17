@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE LambdaCase #-}
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -26,6 +27,7 @@ import Data.Default (def)
 import Data.String.Conversions (cs)
 
 import Reflex (never)
+import Obelisk.Route.Frontend (askRoute, subRoute_)
 
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
@@ -89,10 +91,81 @@ page = do
                               & textAreaElementConfig_initialValue .~ ""
                               & textAreaElementConfig_setValue .~ (fmap cs wsEvt)
   return ()
+
+nav :: forall t js m. ( DomBuilder t m, Prerender js m
+        , PerformEvent t m, TriggerEvent t m, PostBuild t m) => m ()
+nav = do
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "事件源"
+    divClass "menu" $ do
+      divClass "item" $ text "crontab表达式"
+      divClass "item" $ text "本地文件监控"
+      divClass "item" $ text "HDFS文件监控"            
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "数据源"
+    divClass "menu" $ do
+      divClass "item" $ text "sql"
+      divClass "item" $ text "kafka"
+      divClass "item" $ text "websocket"            
+      divClass "item" $ text "minio"
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "状态源"
+    divClass "menu" $ do
+      divClass "item" $ text "rocksdb"
+      divClass "item" $ text "sqllite"            
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "函数式组件库"
+    divClass "menu" $ do
+      divClass "item" $ text "UDF"
+      divClass "item" $ text "UDTF"
+      divClass "item" $ text "UDAF"            
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时ETL引擎"
+    divClass "menu" $ do
+      divClass "item" $ text "Conduit"
+      divClass "item" $ text "SQL游标"
+      divClass "item" $ text "规则引擎"            
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时BI报表"
+    divClass "menu" $ do
+      divClass "item" $ text "公共报表"
+      divClass "item" $ text "个人报表"
+      divClass "item" $ text "报表开发器"
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时API接口"
+    divClass "menu" $ do
+      divClass "item" $ text "api推送"
+      divClass "item" $ text "api拉取"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "数据服务接口"
+    divClass "menu" $ do
+      divClass "item" $ text "sql"
+      divClass "item" $ text "elasticsearch"
+      divClass "item" $ text "hbase"
+      divClass "item" $ text "kudu"
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "数据存储接口"
+    divClass "menu" $ do
+      divClass "item" $ text "minio"
+      divClass "item" $ text "hdfs"
+      divClass "item" $ text "ftp"
+      divClass "item" $ text "sftp"            
   
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
   , _frontend_body = do
-      page
+      divClass "ui left sidebar vertical menu visible" $ nav
+{--      
+      elAttr "div" (  "class" =: "ui container pusher"
+                   <> "style" =: "margin-right: 300px !important; position: relative;")
+--}
+      divClass "ui container pusher" $ do
+        page
+        subRoute_ $ \case
+          Route_EventSource -> undefined
+          Route_DataSource -> undefined
+          Route_StateSource -> undefined                    
+        undefined
   }
