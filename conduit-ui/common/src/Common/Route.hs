@@ -32,6 +32,7 @@ data BackendRoute :: * -> * where
   -- | Used to handle unparseable routes.
   BackendRoute_Missing :: BackendRoute ()
   BackendRoute_WSConduit :: BackendRoute ()
+  BackendRoute_WSConduitV2 :: BackendRoute ()  
   BackendRoute_API :: BackendRoute (Maybe (R APIRoute))
 deriving instance Show (BackendRoute a)
 
@@ -55,6 +56,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       BackendRoute_API -> PathSegment "api" $ maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         APIRoute_Ping -> PathSegment "ping" $ unitEncoder mempty
       BackendRoute_WSConduit -> PathSegment "wsConduit" $ unitEncoder mempty
+      BackendRoute_WSConduitV2 -> PathSegment "wsConduitV2" $ unitEncoder mempty      
     InR obeliskRoute -> obeliskRouteSegment obeliskRoute $ \case
       -- The encoder given to PathEnd determines how to parse query parameters,
       -- in this example, we have none, so we insist on it.

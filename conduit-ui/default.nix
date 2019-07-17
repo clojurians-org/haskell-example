@@ -50,6 +50,14 @@ project ./. ({ pkgs, hackGet, ... }: {
         sha256 = "1li8w95ibq4xm717clz5wz23kdp15j9vrqb1kq64d5ld0fjx7ln0" ;} + /semantic-reflex)
       {}))) ;
 
+    transient = pkgs.haskell.lib.dontHaddock (pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "transient"
+      (pkgs.fetchFromGitHub {
+        owner = "transient-haskell" ;
+        repo = "transient" ;
+        rev = "7f73e2aeb782677232ee9e10677c7891521ca441" ;
+        sha256 = "0apkyjlpfrff3kyrz3qrg6a7k4wpdd2731yfc8i83mm9hi1bm967" ;} )
+      {}))) ;
+
     # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;
 })

@@ -36,6 +36,8 @@ library
     , snap
     , servant-snap
     , websockets-snap
+    , transient
+    , regex-tdfa
 
   exposed-modules:
     Backend
@@ -60,3 +62,4 @@ executable backend
                , common
                , frontend
                , obelisk-backend
+               , transient
