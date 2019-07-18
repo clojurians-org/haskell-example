@@ -17,17 +17,23 @@ import Obelisk.Frontend
 import Obelisk.Route
 import Reflex.Dom.Core
 
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Common.Api
 import Common.Route
 import Obelisk.Generated.Static
 
+import Control.Monad.Fix (MonadFix)
 import Data.Default (def)
 import Data.String.Conversions (cs)
 
 import Reflex (never)
-import Obelisk.Route.Frontend (askRoute, subRoute_)
+import Obelisk.Route.Frontend (RoutedT, RouteToUrl, SetRoute, routeLink, askRoute, subRoute_)
+
+import qualified Obelisk.ExecutableConfig as Cfg
+import Text.Regex.TDFA ((=~))
+import Control.Applicative ((<|>))
+import Data.Maybe (fromJust)
 
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
@@ -68,9 +74,11 @@ exampleCode = unlines [
         , "            .| C.mapM_ (liftIO . print))"
         ]
 
-page :: forall t js m. ( DomBuilder t m, Prerender js m
-        , PerformEvent t m, TriggerEvent t m, PostBuild t m) => m ()
-page = do
+pageOld :: forall t js m. ( DomBuilder t m, Prerender js m
+        , PerformEvent t m, TriggerEvent t m, PostBuild t m)
+        => T.Text -> m ()
+pageOld configRoute = do
+  let hostPort = fromJust $ T.stripPrefix "https://" configRoute <|>  T.stripPrefix "http://" configRoute
   divClass "ui segment basic" $ 
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do
@@ -81,7 +89,7 @@ page = do
         domEvent Click . fst <$> elClass' "button" "ui button blue" (text "RUN")
 
       wsEvt :: (Event t B.ByteString) <- prerender (return never) $ do
-        ws <- webSocket "ws://10.132.37.200:4444/wsConduit" $
+        ws <- webSocket ("ws://" <> hostPort <> "/wsConduit")  $
 --                def & webSocketConfig_send .~ (never :: Event t [T.Text])
                 def & webSocketConfig_send .~ (fmap (:[]) $ tag (current . value $ myInput) runEvt)
         return (_webSocket_recv ws)
@@ -93,32 +101,35 @@ page = do
   return ()
 
 nav :: forall t js m. ( DomBuilder t m, Prerender js m
-        , PerformEvent t m, TriggerEvent t m, PostBuild t m) => m ()
+        , PerformEvent t m, TriggerEvent t m, PostBuild t m
+        , RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m) => m ()
 nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
-      divClass "item" $ text "crontab表达式"
-      divClass "item" $ text "本地文件监控"
-      divClass "item" $ text "HDFS文件监控"            
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronExpr :/ ()) $ text "Cron表达式"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_LocalFileWatcher :/ ()) $ text "本地文件监控"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_HDFSFileWatcher :/ ()) $ text "HDFS文件监控"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据源"
     divClass "menu" $ do
-      divClass "item" $ text "sql"
-      divClass "item" $ text "kafka"
-      divClass "item" $ text "websocket"            
-      divClass "item" $ text "minio"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQL :/ ()) $ text "SQL"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Kafka :/ ()) $ text "Kafka"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket" 
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Minio :/ ()) $ text "Minio"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_API :/ ()) $ text "API"
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "状态源"
+    elClass "h4" "ui header" $ text "状态容器"
     divClass "menu" $ do
-      divClass "item" $ text "rocksdb"
-      divClass "item" $ text "sqllite"            
+      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
+      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "函数式组件库"
     divClass "menu" $ do
-      divClass "item" $ text "UDF"
-      divClass "item" $ text "UDTF"
-      divClass "item" $ text "UDAF"            
+      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_SerDe :/ ()) $ text "SerDe"
+      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDF :/ ()) $ text "UDF"
+      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDAF :/ ()) $ text "UDAF"
+      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDTF :/ ()) $ text "UDTF"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "实时ETL引擎"
     divClass "menu" $ do
@@ -134,38 +145,60 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "实时API接口"
     divClass "menu" $ do
-      divClass "item" $ text "api推送"
-      divClass "item" $ text "api拉取"
-
+      divClass "item" $ text "API推送"
+      divClass "item" $ text "API拉取"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据服务接口"
     divClass "menu" $ do
-      divClass "item" $ text "sql"
-      divClass "item" $ text "elasticsearch"
-      divClass "item" $ text "hbase"
-      divClass "item" $ text "kudu"
+      divClass "item" $ text "SQL"
+      divClass "item" $ text "ElasticSearch"
+      divClass "item" $ text "Hbase"
+      divClass "item" $ text "Kudu"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据存储接口"
     divClass "menu" $ do
-      divClass "item" $ text "minio"
-      divClass "item" $ text "hdfs"
-      divClass "item" $ text "ftp"
-      divClass "item" $ text "sftp"            
+      divClass "item" $ text "Minio"
+      divClass "item" $ text "Hdfs"
+      divClass "item" $ text "Ftp"
+      divClass "item" $ text "SFtp"            
+
+page :: forall t js m.
+  ( DomBuilder t m, Prerender js m
+  , MonadFix m, MonadHold t m
+  , PerformEvent t m, TriggerEvent t m, PostBuild t m
+  , RouteToUrl (R FrontendRoute) m)
+  => T.Text -> RoutedT t (R FrontendRoute) m ()
+page configRoute =  do
+  subRoute_ $ \case
+    FrontendRoute_Main -> text "my Main"
+    FrontendRoute_EventSource -> subRoute_ $ \case
+      EventSourceRoute_CronExpr -> pageOld configRoute
+      EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher"
+      EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher"
+    FrontendRoute_DataSource -> subRoute_ $ \case
+      DataSourceRoute_SQL -> text "my DataSourceRoute_SQL"
+      DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka"
+      DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket"
+      DataSourceRoute_Minio -> text "my DataSourceRoute_Minio"
+      DataSourceRoute_API -> text "my DataSourceRoute_API"
+    FrontendRoute_StateContainer -> subRoute_ $ \case
+      StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB"
+      StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite"
+    FrontendRoute_LambdaLib -> subRoute_ $ \case
+      LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe"
+      LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF"
+      LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF"
+      LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF"
   
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
   , _frontend_body = do
-      divClass "ui left sidebar vertical menu visible" $ nav
-{--      
-      elAttr "div" (  "class" =: "ui container pusher"
-                   <> "style" =: "margin-right: 300px !important; position: relative;")
---}
-      divClass "ui container pusher" $ do
-        page
-        subRoute_ $ \case
-          Route_EventSource -> undefined
-          Route_DataSource -> undefined
-          Route_StateSource -> undefined                    
-        undefined
+      Just configRoute <- liftIO $ Cfg.get "config/common/route"
+      divClass "ui grid" $ do
+        divClass "ui two wide column vertical menu visible" $ nav
+        divClass "ui ten wide column container" $ page configRoute
+        divClass "ui four wide column container" $ text "info"
+        -- do page
+--        divClass "ui container pusher" $ page
   }

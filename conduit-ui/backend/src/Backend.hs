@@ -4,8 +4,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
-
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Backend where
 
 import Prelude
@@ -13,8 +14,10 @@ import Common.Route
 import Obelisk.Backend
 
 import Fn
+
+import GHC.Int (Int64)
 import Control.Exception (finally)
-import Control.Monad (forever)
+import Control.Monad (forever, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
 
@@ -38,9 +41,51 @@ import qualified Data.Conduit.Combinators as C
 
 import Data.String.Conversions (cs)
 
+import Control.Applicative ((<|>))
+import Control.Concurrent (MVar, newMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
+import Transient.Base (TransIO, keep, async, waitEvents)
+
+import Control.Concurrent.STM.TBMChan (TBMChan, newTBMChanIO, closeTBMChan, writeTBMChan)
+
+import qualified Hasql.Connection as H (Connection, Settings, settings, acquire, settings)
+import qualified Hasql.Session as H (Session(..), QueryError, run, statement)
+import qualified Hasql.Statement as HS (Statement(..))
+import qualified Hasql.Encoders as HE (Params(..), unit)
+import qualified Hasql.Decoders as HD
+import Text.Heredoc (str)
+
+import GHC.Generics (Generic)
+import qualified Data.Aeson as J
+import Text.Regex.TDFA ((=~))
+
+eventGenerator :: TBMChan B.ByteString -> IO ()
+eventGenerator chan = do
+  threadDelay (1000 * 1000 * 5)
+  putStrLn "eventGenerator ..."    
+  forever $ do
+    putStrLn "forever ..."  
+    threadDelay (1000 * 1000 * 60)
+
 type MyAPI = "api" :> "ping" :> Get '[PlainText] String
 myAPI :: Snap String
 myAPI = return "pong\n"
+
+data CronEventDef = CronEventDef {
+    ce_name :: T.Text
+  , ce_expr :: T.Text
+  , ce_xid :: Int64
+  } deriving (Generic, Show)
+instance J.ToJSON CronEventDef
+data JobConfig = JobConfig T.Text deriving (Generic, Show)
+instance J.ToJSON JobConfig
+data ServerST = ServerST {
+    ss_cronEventSTs :: [(T.Text, CronEventDef)]
+  , ss_jobConfigSTs :: [(T.Text, JobConfig)]
+  } deriving (Generic, Show)
+instance J.ToJSON ServerST
+
+data AppMessage = AppServerST ServerST | AppCronEvent T.Text deriving (Generic, Show)
+instance J.ToJSON AppMessage
 
 wsConduitApp :: WS.ServerApp
 wsConduitApp pending= do
@@ -51,15 +96,45 @@ wsConduitApp pending= do
    .| C.mapM (I.runInterpreter . dynHaskell)
    .| C.mapM_ (WS.sendTextData conn . (id @T.Text . cs . show))
 
+wsConduitV2App :: MVar ServerST -> TBMChan B.ByteString -> WS.ServerApp
+wsConduitV2App m chan pending = do
+  conn <- WS.acceptRequest pending
+  st <- readMVar m
+  WS.sendTextData conn (J.encode (AppServerST st))
+  putStrLn ""
+
+initServerST :: IO (MVar ServerST)
+initServerST = do
+  let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
+  let sql = "select schedule, command, jobid from cron.job"
+  let parseCronName :: T.Text -> T.Text
+      parseCronName schedule = 
+        let (_,_,_, x:_)  :: (String, String, String, [String]) =
+              (cs schedule ::String) =~ ("pg_notify\\('.+', +'(.+)'\\)" ::String)
+        in cs x
+  Right connection <- H.acquire pgSettings
+  let mkRow = CronEventDef <$> fmap parseCronName (HD.column HD.text)
+                           <*> HD.column HD.text
+                           <*> HD.column HD.int8
+  Right cronEventSTs <- flip H.run connection $ H.statement () $ HS.Statement sql HE.unit (HD.rowList mkRow) True
+  newMVar (ServerST (fmap ((,) <$> ce_name <*>  id) cronEventSTs) [])
+
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
-  { _backend_run = \serve -> serve $ do
-      \case
-        BackendRoute_Missing :=> _ -> return ()
-        BackendRoute_API :=> _ -> do
-          liftSnap $ serveSnap (Proxy::Proxy MyAPI) myAPI
-        BackendRoute_WSConduit :=> _ -> do
-          runWebSocketsSnap wsConduitApp
+  { _backend_run = \serve -> void . keep  $ do
+      chan <- liftIO $ newTBMChanIO 1000
+      serverST <- liftIO $ initServerST
+      liftIO $ readMVar serverST >>= print
+      async (eventGenerator chan) <|> (liftIO $ serve $ do
+        \case
+          BackendRoute_Missing :=> _ -> return ()
+          BackendRoute_API :=> _ -> do
+            liftSnap $ serveSnap (Proxy::Proxy MyAPI) myAPI
+          BackendRoute_WSConduit :=> _ -> do
+            runWebSocketsSnap wsConduitApp
+          BackendRoute_WSConduitV2 :=> _ -> do
+            runWebSocketsSnap (wsConduitV2App serverST chan)
+          )
   , _backend_routeEncoder = backendRouteEncoder
   }
 
