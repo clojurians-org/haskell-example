@@ -94,6 +94,11 @@ pageOld wsEvt configRoute = do
                               & textAreaElementConfig_setValue .~ (fmap cs wsEvt)
       return $ fmap (:[]) $ tag (current . value $ myInput) runEvt
 
+cronExpr :: DomBuilder t m => m (Event t [T.Text])
+cronExpr = do
+  elClass "table" "ui table" undefined
+ 
+--  el "table" 
 nav :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m
         , RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m) => m ()
@@ -101,20 +106,23 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronExpr :/ ()) $ text "Cron表达式"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_LocalFileWatcher :/ ()) $ text "本地文件监控"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_HDFSFileWatcher :/ ()) $ text "HDFS文件监控"
+      divClass "item" $ text "一键实时"
+      divClass "item" $ text "HTTP请求"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronExpr :/ ()) $ text "Cron定时器"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_LocalFileWatcher :/ ()) $ text "文件监控"
+
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据源"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQL :/ ()) $ text "SQL"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Kafka :/ ()) $ text "Kafka"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket" 
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_API :/ ()) $ text "RestAPI"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQL :/ ()) $ text "SQL游标"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Minio :/ ()) $ text "Minio"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_API :/ ()) $ text "API"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "状态容器"
     divClass "menu" $ do
+      divClass "item" $ text "PostgreSQL"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
   divClass "item" $ do
@@ -128,8 +136,15 @@ nav = do
     elClass "h4" "ui header" $ text "实时ETL引擎"
     divClass "menu" $ do
       divClass "item" $ text "Conduit"
-      divClass "item" $ text "SQL游标"
-      divClass "item" $ text "规则引擎"            
+      divClass "item" $ text "SQL"
+      divClass "item" $ text "规则引擎"
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时服务接口"
+    divClass "menu" $ do
+      divClass "item" $ text "PostgREST"
+      divClass "item" $ text "ElasticSearch"
+      divClass "item" $ text "Hbase"
+      divClass "item" $ text "Kudu"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "实时BI报表"
     divClass "menu" $ do
@@ -137,24 +152,16 @@ nav = do
       divClass "item" $ text "个人报表"
       divClass "item" $ text "报表开发器"
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时API接口"
+    elClass "h4" "ui header" $ text "实时通知接口"
     divClass "menu" $ do
-      divClass "item" $ text "API推送"
-      divClass "item" $ text "API拉取"
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "数据服务接口"
-    divClass "menu" $ do
-      divClass "item" $ text "SQL"
-      divClass "item" $ text "ElasticSearch"
-      divClass "item" $ text "Hbase"
-      divClass "item" $ text "Kudu"
+      divClass "item" $ text "WebHook"
+      divClass "item" $ text "Email"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据存储接口"
     divClass "menu" $ do
       divClass "item" $ text "Minio"
-      divClass "item" $ text "Hdfs"
-      divClass "item" $ text "Ftp"
-      divClass "item" $ text "SFtp"            
+      divClass "item" $ text "HDFS"
+      divClass "item" $ text "Ftp/SFtp"
 
 page :: forall t js m.
   ( DomBuilder t m, Prerender js m
