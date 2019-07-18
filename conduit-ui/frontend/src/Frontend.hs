@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecursiveDo #-}
 
 module Frontend where
 
@@ -28,7 +29,7 @@ import Data.Default (def)
 import Data.String.Conversions (cs)
 
 import Reflex (never)
-import Obelisk.Route.Frontend (RoutedT, RouteToUrl, SetRoute, routeLink, askRoute, subRoute_)
+import Obelisk.Route.Frontend (RoutedT, RouteToUrl, SetRoute, routeLink, askRoute, subRoute, subRoute_)
 
 import qualified Obelisk.ExecutableConfig as Cfg
 import Text.Regex.TDFA ((=~))
@@ -76,8 +77,8 @@ exampleCode = unlines [
 
 pageOld :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m)
-        => T.Text -> m ()
-pageOld configRoute = do
+        => Event t B.ByteString -> T.Text -> m (Event t [T.Text])
+pageOld wsEvt configRoute = do
   let hostPort = fromJust $ T.stripPrefix "https://" configRoute <|>  T.stripPrefix "http://" configRoute
   divClass "ui segment basic" $ 
     divClass "ui form" $ do
@@ -88,17 +89,11 @@ pageOld configRoute = do
       runEvt :: (Event t ()) <- divClass "ui field" $ do
         domEvent Click . fst <$> elClass' "button" "ui button blue" (text "RUN")
 
-      wsEvt :: (Event t B.ByteString) <- prerender (return never) $ do
-        ws <- webSocket ("ws://" <> hostPort <> "/wsConduit")  $
---                def & webSocketConfig_send .~ (never :: Event t [T.Text])
-                def & webSocketConfig_send .~ (fmap (:[]) $ tag (current . value $ myInput) runEvt)
-        return (_webSocket_recv ws)
-
       divClass "ui field" $
         textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
                               & textAreaElementConfig_initialValue .~ ""
                               & textAreaElementConfig_setValue .~ (fmap cs wsEvt)
-  return ()
+      return $ fmap (:[]) $ tag (current . value $ myInput) runEvt
 
 nav :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m
@@ -167,38 +162,52 @@ page :: forall t js m.
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
   , RouteToUrl (R FrontendRoute) m)
-  => T.Text -> RoutedT t (R FrontendRoute) m ()
-page configRoute =  do
-  subRoute_ $ \case
-    FrontendRoute_Main -> text "my Main"
-    FrontendRoute_EventSource -> subRoute_ $ \case
-      EventSourceRoute_CronExpr -> pageOld configRoute
-      EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher"
-      EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher"
-    FrontendRoute_DataSource -> subRoute_ $ \case
-      DataSourceRoute_SQL -> text "my DataSourceRoute_SQL"
-      DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka"
-      DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket"
-      DataSourceRoute_Minio -> text "my DataSourceRoute_Minio"
-      DataSourceRoute_API -> text "my DataSourceRoute_API"
-    FrontendRoute_StateContainer -> subRoute_ $ \case
-      StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB"
-      StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite"
-    FrontendRoute_LambdaLib -> subRoute_ $ \case
-      LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe"
-      LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF"
-      LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF"
-      LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF"
+  => Event t B.ByteString -> T.Text -> RoutedT t (R FrontendRoute) m (Event t [T.Text])
+page wsEvt configRoute =  do
+        fmap updated . subRoute $ \case
+            FrontendRoute_Main -> text "my Main" >> return (never :: Event t [T.Text])
+{--                          
+            FrontendRoute_EventSource -> fmap updated . subRoute $ \case
+              EventSourceRoute_CronExpr -> pageOld wsEvt configRoute
+
+              EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher" >> return never
+              EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher" >> return never
+
+            FrontendRoute_DataSource -> fmap updated . subRoute $ \case
+              DataSourceRoute_SQL -> text "my DataSourceRoute_SQL" >> return never
+              DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
+              DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
+              DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never
+              DataSourceRoute_API -> text "my DataSourceRoute_API" >> return never
+            FrontendRoute_StateContainer -> fmap updated . subRoute $ \case
+              StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
+              StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
+            FrontendRoute_LambdaLib -> fmap updated . subRoute $ \case
+              LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe" >> return never
+              LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF" >> return never
+              LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
+              LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
+--}
   
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
   , _frontend_body = do
       Just configRoute <- liftIO $ Cfg.get "config/common/route"
-      divClass "ui grid" $ do
-        divClass "ui two wide column vertical menu visible" $ nav
-        divClass "ui ten wide column container" $ page configRoute
-        divClass "ui four wide column container" $ text "info"
-        -- do page
---        divClass "ui container pusher" $ page
+      let hostPort = fromJust $ T.stripPrefix "https://" configRoute <|>  T.stripPrefix "http://" configRoute
+
+      rec 
+        wsRecvEvt :: (Event t B.ByteString) <- prerender (return never) $ do
+          ws <- webSocket ("ws://" <> hostPort <> "/wsConduit")  $
+  --                def & webSocketConfig_send .~ (never :: Event t [T.Text])
+                  def & webSocketConfig_send .~ wsSendEvt
+          return (_webSocket_recv ws)
+
+        wsSendEvt <- 
+          divClass "ui grid" $ do
+            divClass "ui two wide column vertical menu visible" $ nav
+            pageSendEvt <- divClass "ui ten wide column container" $ page wsRecvEvt configRoute
+            divClass "ui four wide column container" $ text "info"
+            return pageSendEvt
+      return ()
   }
