@@ -79,7 +79,6 @@ pageOld :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m)
         => Event t B.ByteString -> T.Text -> m (Event t [T.Text])
 pageOld wsEvt configRoute = do
-  let hostPort = fromJust $ T.stripPrefix "https://" configRoute <|>  T.stripPrefix "http://" configRoute
   divClass "ui segment basic" $ 
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do
@@ -161,34 +160,34 @@ page :: forall t js m.
   ( DomBuilder t m, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
-  , RouteToUrl (R FrontendRoute) m)
+--  , RouteToUrl (R FrontendRoute) m
+  )
   => Event t B.ByteString -> T.Text -> RoutedT t (R FrontendRoute) m (Event t [T.Text])
-page wsEvt configRoute =  do
-        fmap updated . subRoute $ \case
-            FrontendRoute_Main -> text "my Main" >> return (never :: Event t [T.Text])
-{--                          
-            FrontendRoute_EventSource -> fmap updated . subRoute $ \case
-              EventSourceRoute_CronExpr -> pageOld wsEvt configRoute
 
-              EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher" >> return never
-              EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher" >> return never
+page wsEvt configRoute = do
+  fmap switchDyn $ subRoute $ \case
+      FrontendRoute_Main -> text "my main" >> return never
 
-            FrontendRoute_DataSource -> fmap updated . subRoute $ \case
-              DataSourceRoute_SQL -> text "my DataSourceRoute_SQL" >> return never
-              DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
-              DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
-              DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never
-              DataSourceRoute_API -> text "my DataSourceRoute_API" >> return never
-            FrontendRoute_StateContainer -> fmap updated . subRoute $ \case
-              StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
-              StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
-            FrontendRoute_LambdaLib -> fmap updated . subRoute $ \case
-              LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe" >> return never
-              LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF" >> return never
-              LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
-              LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
---}
-  
+      FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
+        EventSourceRoute_CronExpr -> pageOld wsEvt configRoute
+        EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher" >> return never
+        EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher" >> return never
+        
+      FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
+        DataSourceRoute_SQL -> text "my DataSourceRoute_SQL" >> return never
+        DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
+        DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
+        DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never
+        DataSourceRoute_API -> text "my DataSourceRoute_API" >> return never
+      FrontendRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
+        StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
+        StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
+      FrontendRoute_LambdaLib -> fmap switchDyn $ subRoute $ \case
+        LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe" >> return never
+        LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF" >> return never
+        LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
+        LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
+
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
