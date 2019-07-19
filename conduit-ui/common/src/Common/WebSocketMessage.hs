@@ -19,16 +19,16 @@ instance J.ToJSON CronEventDef
 
 data JobConfig = JobConfig T.Text deriving (Generic, Show)
 instance J.ToJSON JobConfig
-data ServerST = ServerST {
-    ss_cronEventSTs :: [(T.Text, CronEventDef)]
-  , ss_jobConfigSTs :: [(T.Text, JobConfig)]
+data AppST = MkAppST {
+    app_cronEventSTs :: [CronEventDef]
+  , app_jobConfigSTs :: [JobConfig]
   } deriving (Generic, Show)
-instance J.ToJSON ServerST
+instance J.ToJSON AppST
 
 data AppEvent = CronCreateEvent T.Text
               | CronModifyEvent T.Text
               | CronDeleteEvent T.Text
-data AppMessage = AppST ServerST | AppEvent
+data AppMessage = AppST | AppEvent
   deriving (Generic, Show)
 instance J.ToJSON AppMessage
 

@@ -36,6 +36,8 @@ import Text.Regex.TDFA ((=~))
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
 
+import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer)
+
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
   elAttr "link" ( "rel" =: "stylesheet"
@@ -77,8 +79,8 @@ exampleCode = unlines [
 
 pageOld :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m)
-        => Event t B.ByteString -> T.Text -> m (Event t [T.Text])
-pageOld wsEvt configRoute = do
+        => Event t B.ByteString -> m (Event t [T.Text])
+pageOld wsEvt = do
   divClass "ui segment basic" $ 
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do
@@ -93,10 +95,6 @@ pageOld wsEvt configRoute = do
                               & textAreaElementConfig_initialValue .~ ""
                               & textAreaElementConfig_setValue .~ (fmap cs wsEvt)
       return $ fmap (:[]) $ tag (current . value $ myInput) runEvt
-
-cronExpr :: DomBuilder t m => m (Event t [T.Text])
-cronExpr = do
-  elClass "table" "ui table" undefined
  
 --  el "table" 
 nav :: forall t js m. ( DomBuilder t m, Prerender js m
@@ -174,9 +172,9 @@ page wsEvt configRoute = do
       FrontendRoute_Main -> text "my main" >> return never
 
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
-        EventSourceRoute_OneClickRun -> pageOld wsEvt configRoute
+        EventSourceRoute_OneClickRun -> pageOld wsEvt
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
-        EventSourceRoute_CronTimer -> text "my EventSourceRoute_FileWatcher" >> return never
+        EventSourceRoute_CronTimer -> eventSource_cronTimer  wsEvt
         EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
       FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
         DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never

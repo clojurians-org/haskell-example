@@ -5,8 +5,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module Backend where
 
 import Prelude
@@ -14,6 +14,7 @@ import Common.Route
 import Obelisk.Backend
 
 import Fn
+import Common.WebSocketMessage 
 
 import GHC.Int (Int64)
 import Control.Exception (finally)
@@ -54,7 +55,6 @@ import qualified Hasql.Encoders as HE (Params(..), unit)
 import qualified Hasql.Decoders as HD
 import Text.Heredoc (str)
 
-import GHC.Generics (Generic)
 import qualified Data.Aeson as J
 import Text.Regex.TDFA ((=~))
 
@@ -70,25 +70,9 @@ type MyAPI = "api" :> "ping" :> Get '[PlainText] String
 myAPI :: Snap String
 myAPI = return "pong\n"
 
-data CronEventDef = CronEventDef {
-    ce_name :: T.Text
-  , ce_expr :: T.Text
-  , ce_xid :: Int64
-  } deriving (Generic, Show)
-instance J.ToJSON CronEventDef
-data JobConfig = JobConfig T.Text deriving (Generic, Show)
-instance J.ToJSON JobConfig
-data ServerST = ServerST {
-    ss_cronEventSTs :: [(T.Text, CronEventDef)]
-  , ss_jobConfigSTs :: [(T.Text, JobConfig)]
-  } deriving (Generic, Show)
-instance J.ToJSON ServerST
-
-data AppMessage = AppServerST ServerST | AppCronEvent T.Text deriving (Generic, Show)
-instance J.ToJSON AppMessage
-
 wsConduitApp :: WS.ServerApp
 wsConduitApp pending= do
+  putStrLn "websocket connection accepted ..."
   conn <- WS.acceptRequest pending
   runConduit
     $ (forever $ liftIO (WS.receiveData conn) >>= yield)
@@ -96,15 +80,16 @@ wsConduitApp pending= do
    .| C.mapM (I.runInterpreter . dynHaskell)
    .| C.mapM_ (WS.sendTextData conn . (id @T.Text . cs . show))
 
-wsConduitV2App :: MVar ServerST -> TBMChan B.ByteString -> WS.ServerApp
+wsConduitV2App :: MVar AppST -> TBMChan B.ByteString -> WS.ServerApp
 wsConduitV2App m chan pending = do
   conn <- WS.acceptRequest pending
   st <- readMVar m
-  WS.sendTextData conn (J.encode (AppServerST st))
+  WS.sendTextData conn (J.encode st)
   putStrLn ""
 
-initServerST :: IO (MVar ServerST)
-initServerST = do
+{--
+initAppST :: IO (MVar AppST)
+initAppST = do
   let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
   let sql = "select schedule, command, jobid from cron.job"
   let parseCronName :: T.Text -> T.Text
@@ -117,10 +102,13 @@ initServerST = do
                            <*> HD.column HD.text
                            <*> HD.column HD.int8
   Right cronEventSTs <- flip H.run connection $ H.statement () $ HS.Statement sql HE.unit (HD.rowList mkRow) True
-  newMVar (ServerST (fmap ((,) <$> ce_name <*>  id) cronEventSTs) [])
+  newMVar (MkAppST (fmap ((,) <$> ce_name <*>  id) cronEventSTs) [])
+--}
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
+  { _backend_run = \server -> server $ const $ runWebSocketsSnap wsConduitApp
+{--
   { _backend_run = \serve -> void . keep  $ do
       chan <- liftIO $ newTBMChanIO 1000
       serverST <- liftIO $ initServerST
@@ -135,6 +123,7 @@ backend = Backend
           BackendRoute_WSConduitV2 :=> _ -> do
             runWebSocketsSnap (wsConduitV2App serverST chan)
           )
+--}
   , _backend_routeEncoder = backendRouteEncoder
   }
 

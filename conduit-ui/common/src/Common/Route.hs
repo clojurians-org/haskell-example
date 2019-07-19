@@ -116,6 +116,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       FrontendRoute_StateContainer -> PathSegment "stateContainer" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
+          StateContainerRoute_PostgreSQL -> PathSegment "postgreSQL" $ unitEncoder mempty        
           StateContainerRoute_RocksDB -> PathSegment "rocksDB" $ unitEncoder mempty
           StateContainerRoute_SQLLite -> PathSegment "sqlLite" $ unitEncoder mempty
       FrontendRoute_LambdaLib -> PathSegment "lambdaLib" $
