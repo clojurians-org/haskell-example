@@ -106,23 +106,23 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
-      divClass "item" $ text "一键实时"
-      divClass "item" $ text "HTTP请求"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronExpr :/ ()) $ text "Cron定时器"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_LocalFileWatcher :/ ()) $ text "文件监控"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_OneClickRun :/ ()) $ text "一键实时"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_HttpRequest :/ ()) $ text "HTTP请求"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronTimer :/ ()) $ text "Cron定时器"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据源"
     divClass "menu" $ do
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Kafka :/ ()) $ text "Kafka"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_API :/ ()) $ text "RestAPI"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQL :/ ()) $ text "SQL游标"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_RestAPI :/ ()) $ text "RestAPI"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQLCursor :/ ()) $ text "SQL游标"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Minio :/ ()) $ text "Minio"
   divClass "item" $ do
     elClass "h4" "ui header" $ text "状态容器"
     divClass "menu" $ do
-      divClass "item" $ text "PostgreSQL"
+      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_PostgreSQL :/ ()) $ text "PostgreSQL"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
   divClass "item" $ do
@@ -167,26 +167,25 @@ page :: forall t js m.
   ( DomBuilder t m, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
---  , RouteToUrl (R FrontendRoute) m
   )
   => Event t B.ByteString -> T.Text -> RoutedT t (R FrontendRoute) m (Event t [T.Text])
-
 page wsEvt configRoute = do
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
 
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
-        EventSourceRoute_CronExpr -> pageOld wsEvt configRoute
-        EventSourceRoute_LocalFileWatcher -> text "my EventSourceRoute_LocalFileWatcher" >> return never
-        EventSourceRoute_HDFSFileWatcher -> text "my EventSourceRoute_HDFSFileWatcher" >> return never
-        
+        EventSourceRoute_OneClickRun -> pageOld wsEvt configRoute
+        EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
+        EventSourceRoute_CronTimer -> text "my EventSourceRoute_FileWatcher" >> return never
+        EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
       FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
-        DataSourceRoute_SQL -> text "my DataSourceRoute_SQL" >> return never
         DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
         DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
-        DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never
-        DataSourceRoute_API -> text "my DataSourceRoute_API" >> return never
+        DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
+        DataSourceRoute_SQLCursor -> text "my DataSourceRoute_SQLCursor" >> return never
+        DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never        
       FrontendRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
+        StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
         StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
         StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
       FrontendRoute_LambdaLib -> fmap switchDyn $ subRoute $ \case
@@ -209,11 +208,14 @@ frontend = Frontend
                   def & webSocketConfig_send .~ wsSendEvt
           return (_webSocket_recv ws)
 
-        wsSendEvt <- 
+        wsSendEvt <- do
+          divClass "ui message icon" $ do
+            elClass "i" "notched circle loading icon" blank
+            elClass "h1" "ui header" $
+              routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
             divClass "ui two wide column vertical menu visible" $ nav
-            pageSendEvt <- divClass "ui ten wide column container" $ page wsRecvEvt configRoute
-            divClass "ui four wide column container" $ text "info"
+            pageSendEvt <- divClass "ui fourteen wide column container" $ page wsRecvEvt configRoute
             return pageSendEvt
       return ()
   }

@@ -56,20 +56,23 @@ data FrontendRoute :: * -> * where
 deriving instance Show (FrontendRoute a)
 
 data EventSourceRoute :: * -> * where
-  EventSourceRoute_CronExpr :: EventSourceRoute ()
-  EventSourceRoute_LocalFileWatcher :: EventSourceRoute ()
-  EventSourceRoute_HDFSFileWatcher :: EventSourceRoute ()
+  EventSourceRoute_OneClickRun :: EventSourceRoute ()
+  EventSourceRoute_HttpRequest :: EventSourceRoute ()
+  EventSourceRoute_CronTimer :: EventSourceRoute ()
+  EventSourceRoute_FileWatcher :: EventSourceRoute ()
 deriving instance Show (EventSourceRoute a)
 
 data DataSourceRoute :: * -> * where
-  DataSourceRoute_SQL :: DataSourceRoute ()
   DataSourceRoute_Kafka :: DataSourceRoute ()
-  DataSourceRoute_Minio :: DataSourceRoute ()
   DataSourceRoute_WebSocket :: DataSourceRoute ()
-  DataSourceRoute_API :: DataSourceRoute ()
+  DataSourceRoute_RestAPI :: DataSourceRoute ()  
+  DataSourceRoute_SQLCursor :: DataSourceRoute ()
+  DataSourceRoute_Minio :: DataSourceRoute ()
+
 deriving instance Show (DataSourceRoute a)
 
 data StateContainerRoute :: * -> * where
+  StateContainerRoute_PostgreSQL :: StateContainerRoute ()  
   StateContainerRoute_RocksDB :: StateContainerRoute ()
   StateContainerRoute_SQLLite :: StateContainerRoute ()
 
@@ -98,17 +101,18 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       FrontendRoute_EventSource -> PathSegment "eventSource" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
-          EventSourceRoute_CronExpr -> PathSegment "cronExpr" $ unitEncoder mempty
-          EventSourceRoute_LocalFileWatcher -> PathSegment "localFileWatcher" $ unitEncoder mempty
-          EventSourceRoute_HDFSFileWatcher -> PathSegment "hdfsFileWatcher" $ unitEncoder mempty
+          EventSourceRoute_OneClickRun -> PathSegment "oneClickRun" $ unitEncoder mempty
+          EventSourceRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
+          EventSourceRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
+          EventSourceRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
       FrontendRoute_DataSource -> PathSegment "dataSource" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
-          DataSourceRoute_SQL -> PathSegment "sql" $ unitEncoder mempty
           DataSourceRoute_Kafka -> PathSegment "kafka" $ unitEncoder mempty
           DataSourceRoute_WebSocket -> PathSegment "webSocket" $ unitEncoder mempty
+          DataSourceRoute_RestAPI -> PathSegment "restApi" $ unitEncoder mempty          
+          DataSourceRoute_SQLCursor -> PathSegment "sqlCursor" $ unitEncoder mempty
           DataSourceRoute_Minio -> PathSegment "minio" $ unitEncoder mempty
-          DataSourceRoute_API -> PathSegment "api" $ unitEncoder mempty
       FrontendRoute_StateContainer -> PathSegment "stateContainer" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
