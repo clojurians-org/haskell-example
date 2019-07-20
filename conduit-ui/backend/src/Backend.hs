@@ -107,23 +107,22 @@ initAppST = do
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
-  { _backend_run = \server -> server $ const $ runWebSocketsSnap wsConduitApp
-{--
-  { _backend_run = \serve -> void . keep  $ do
+  { _backend_run = \serve ->
+      {-- void . keep  $ do
       chan <- liftIO $ newTBMChanIO 1000
       serverST <- liftIO $ initServerST
       liftIO $ readMVar serverST >>= print
-      async (eventGenerator chan) <|> (liftIO $ serve $ do
+      async (eventGenerator chan) <|> (liftIO $
+      --}
+      serve $ do
         \case
           BackendRoute_Missing :=> _ -> return ()
           BackendRoute_API :=> _ -> do
             liftSnap $ serveSnap (Proxy::Proxy MyAPI) myAPI
           BackendRoute_WSConduit :=> _ -> do
             runWebSocketsSnap wsConduitApp
-          BackendRoute_WSConduitV2 :=> _ -> do
-            runWebSocketsSnap (wsConduitV2App serverST chan)
-          )
---}
+--          BackendRoute_WSConduitV2 :=> _ -> do
+--            runWebSocketsSnap (wsConduitV2App serverST chan)
   , _backend_routeEncoder = backendRouteEncoder
   }
 

@@ -10,7 +10,10 @@
 
 module Frontend where
 
+import Common.WebSocketMessage
 import Prelude
+
+import GHC.Int (Int64)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -35,6 +38,7 @@ import qualified Obelisk.ExecutableConfig as Cfg
 import Text.Regex.TDFA ((=~))
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
+import System.Random (randomRIO)
 
 import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer)
 
@@ -88,7 +92,7 @@ pageOld wsEvt = do
                               & textAreaElementConfig_initialValue .~ (cs exampleCode)
                               
       runEvt :: (Event t ()) <- divClass "ui field" $ do
-        domEvent Click . fst <$> elClass' "button" "ui button blue" (text "RUN")
+        domEvent Click . fst <$> elClass' "button" "ui button teal" (text "RUN")
 
       divClass "ui field" $
         textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
@@ -102,11 +106,16 @@ nav :: forall t js m. ( DomBuilder t m, Prerender js m
         , RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m) => m ()
 nav = do
   divClass "item" $ do
+    elClass "h4" "ui header" $ text "数据网络"
+    divClass "menu" $ do
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_OneClickRun :/ ()) $ text "一键实时"            
+      divClass "item" $ text "逻辑节点"
+      divClass "item" $ text "工作流"
+  divClass "item" $ do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_OneClickRun :/ ()) $ text "一键实时"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronTimer :/ ()) $ text "Cron定时器"      
       divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_HttpRequest :/ ()) $ text "HTTP请求"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronTimer :/ ()) $ text "Cron定时器"
       divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控"
 
   divClass "item" $ do
@@ -166,13 +175,13 @@ page :: forall t js m.
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
   )
-  => Event t B.ByteString -> T.Text -> RoutedT t (R FrontendRoute) m (Event t [T.Text])
-page wsEvt configRoute = do
+  => Event t WSResponseMessage -> RoutedT t (R FrontendRoute) m (Event t WSRequestMessage)
+page wsEvt = do
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
 
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
-        EventSourceRoute_OneClickRun -> pageOld wsEvt
+        EventSourceRoute_OneClickRun -> text "my EventSourceRoute_OneClickRun" >> return never -- pageOld wsEvt
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
         EventSourceRoute_CronTimer -> eventSource_cronTimer  wsEvt
         EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
@@ -192,20 +201,47 @@ page wsEvt configRoute = do
         LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
         LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
 
+exampleAppST :: AppST
+exampleAppST = AppST
+  [ CronTimerDef "larluo1" "*/5 * * *" (Just 1)
+  , CronTimerDef "larluo2" "*/4 * * *" (Just 2)]
+  []
+
+handleWSRequest :: forall t m js.
+  ( DomBuilder t m, Prerender js m, MonadHold t m
+  , PerformEvent t m, TriggerEvent t m, PostBuild t m)
+  => T.Text -> Event t WSRequestMessage -> m (Event t WSResponseMessage)
+
+handleWSRequest wsURL wsRequest =
+  prerender (return never) $ do
+    pb <- getPostBuild
+    rid :: Int64 <- liftIO $ randomRIO (10, 100)
+    return $ leftmost
+      [ ffor wsRequest $ \case
+          (CronTimerCreateRequest (CronTimerDef name expr Nothing)) ->
+            WSResponseMore . Right . CronTimerCreateResponse $ CronTimerDef name expr (Just rid)
+          (CronTimerUpdateRequest r) ->
+            WSResponseMore . Right $ CronTimerCreateResponse r
+          (CronTimerDeleteRequest xid) ->
+            WSResponseMore . Right $ CronTimerDeleteResponse xid
+      , WSResponseInit exampleAppST <$ pb]
+    {--
+    ws <- webSocket wsURL $
+      def & webSocketConfig_send .~ wsRequest
+    return (_webSocket_recv ws)
+    --}
+
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
   , _frontend_body = do
       Just configRoute <- liftIO $ Cfg.get "config/common/route"
-      let hostPort = fromJust $ T.stripPrefix "https://" configRoute <|>  T.stripPrefix "http://" configRoute
-
-      rec 
-        wsRecvEvt :: (Event t B.ByteString) <- prerender (return never) $ do
-          ws <- webSocket ("ws://" <> hostPort <> "/wsConduit")  $
-  --                def & webSocketConfig_send .~ (never :: Event t [T.Text])
-                  def & webSocketConfig_send .~ wsSendEvt
-          return (_webSocket_recv ws)
-
+      let hostPort = fromJust $  T.stripPrefix "https://" configRoute
+                             <|> T.stripPrefix "http://" configRoute
+                             <|> Just "http://localhost:8000"
+      let wsURL = "ws://" <> hostPort <> "/wsConduit"
+      rec
+        wsRecvEvt <- handleWSRequest wsURL wsSendEvt
         wsSendEvt <- do
           divClass "ui message icon" $ do
             elClass "i" "notched circle loading icon" blank
@@ -213,7 +249,7 @@ frontend = Frontend
               routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
             divClass "ui two wide column vertical menu visible" $ nav
-            pageSendEvt <- divClass "ui fourteen wide column container" $ page wsRecvEvt configRoute
-            return pageSendEvt
+            divClass "ui fourteen wide column container" $ page wsRecvEvt
       return ()
   }
+

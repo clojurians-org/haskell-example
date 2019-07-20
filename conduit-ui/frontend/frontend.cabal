@@ -13,6 +13,7 @@ library
                , obelisk-generated-static
                , text
                , semantic-reflex
+               , random
   exposed-modules:
     Frontend
   ghc-options: -Wall
