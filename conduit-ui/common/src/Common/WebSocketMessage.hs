@@ -16,29 +16,45 @@ data CronTimerDef = CronTimerDef {
   , ce_xid :: Maybe Int64
   } deriving (Generic, Show)
 instance J.ToJSON CronTimerDef
+instance J.FromJSON CronTimerDef
 
 data JobConfig = JobConfig T.Text deriving (Generic, Show)
 instance J.ToJSON JobConfig
+instance J.FromJSON JobConfig
+
 data AppST = AppST {
     app_cronTimerSTs :: [CronTimerDef]
   , app_jobConfigSTs :: [JobConfig]
   } deriving (Generic, Show)
 instance J.ToJSON AppST
+instance J.FromJSON AppST
 
-data WSRequestEvent = CronTimerCreateRequest CronTimerDef
+data WSRequestEvent = HaskellCodeRunRequest T.Text
+                    | CronTimerCreateRequest CronTimerDef
                     | CronTimerReadRequest Int64
                     | CronTimerUpdateRequest CronTimerDef
                     | CronTimerDeleteRequest Int64
                     | CronTimerActiveRequest Int64
                     | CronTimerKillRequest Int64
-  deriving (Generic, Show)                    
-data WSResponseEvent = CronTimerCreateResponse CronTimerDef
-                     | CronTimerReadResponse CronTimerDef
-                     | CronTimerUpdateResponse CronTimerDef
-                     | CronTimerDeleteResponse Int64
-                     | CronTimerActiveResponse Int64
-                     | CronTimerKillResponse Int64
   deriving (Generic, Show)
+instance J.ToJSON WSRequestEvent
+instance J.FromJSON WSRequestEvent
+
+data WSResponseEvent = HaskellCodeRunResponse (Either String ())
+                     | CronTimerCreateResponse (Either String CronTimerDef)
+                     | CronTimerReadResponse (Either String CronTimerDef)
+                     | CronTimerUpdateResponse (Either String CronTimerDef)
+                     | CronTimerDeleteResponse (Either String Int64)
+                     | CronTimerActiveResponse (Either String Int64)
+                     | CronTimerKillResponse (Either String Int64)
+  deriving (Generic, Show)
+instance J.ToJSON WSResponseEvent
+instance J.FromJSON WSResponseEvent
+
 type WSRequestMessage = WSRequestEvent
 data WSResponseMessage = WSResponseInit AppST
-                       | WSResponseMore (Either String WSResponseEvent)
+                       | WSResponseMore WSResponseEvent
+                       | WSResponseUnknown WSRequestMessage
+  deriving (Generic, Show)                     
+instance J.ToJSON WSResponseMessage
+instance J.FromJSON WSResponseMessage

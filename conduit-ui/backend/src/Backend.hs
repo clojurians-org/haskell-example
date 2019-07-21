@@ -17,12 +17,14 @@ import Fn
 import Common.WebSocketMessage 
 
 import GHC.Int (Int64)
+import Data.Maybe (isJust, fromJust)
 import Control.Exception (finally)
 import Control.Monad (forever, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Trans.Class (lift)
 
-import qualified Data.ByteString as B (ByteString)
+import Data.Either.Combinators (mapLeft)
+import qualified Data.ByteString as B
 import qualified Data.Text as T
 import Data.List (unlines, lines)
 
@@ -39,6 +41,7 @@ import Servant.API ((:>)(..), Get, PlainText)
 import qualified Language.Haskell.Interpreter as I
 import Data.Conduit (runConduit, yield, (.|))
 import qualified Data.Conduit.Combinators as C
+import qualified Data.Conduit.List as CL
 
 import Data.String.Conversions (cs)
 
@@ -70,26 +73,28 @@ type MyAPI = "api" :> "ping" :> Get '[PlainText] String
 myAPI :: Snap String
 myAPI = return "pong\n"
 
-wsConduitApp :: WS.ServerApp
-wsConduitApp pending= do
+wsConduitApp :: MVar AppST -> WS.ServerApp
+wsConduitApp appST pending= do
   putStrLn "websocket connection accepted ..."
   conn <- WS.acceptRequest pending
+  readMVar appST >>= WS.sendTextData conn . J.encode . WSResponseInit
   runConduit
-    $ (forever $ liftIO (WS.receiveData conn) >>= yield)
-   .| C.map (id @T.Text)
-   .| C.mapM (I.runInterpreter . dynHaskell)
-   .| C.mapM_ (WS.sendTextData conn . (id @T.Text . cs . show))
+    $ (forever $ liftIO (WS.receiveData conn) >>= yield . J.decode)
+   .| CL.mapMaybe (id @(Maybe WSRequestMessage))
+   .| C.mapM (\case
+                 HaskellCodeRunRequest r ->
+                   return . WSResponseMore . HaskellCodeRunResponse . mapLeft show =<< (I.runInterpreter . dynHaskell) r
+                 unknown ->
+                   (return . WSResponseUnknown) unknown)
+   .| C.mapM_ (WS.sendTextData conn . J.encode)
 
-wsConduitV2App :: MVar AppST -> TBMChan B.ByteString -> WS.ServerApp
-wsConduitV2App m chan pending = do
-  conn <- WS.acceptRequest pending
-  st <- readMVar m
-  WS.sendTextData conn (J.encode st)
-  putStrLn ""
-
-{--
 initAppST :: IO (MVar AppST)
 initAppST = do
+  newMVar $ AppST
+    [ CronTimerDef "larluo1" "*/5 * * *" (Just 1)
+    , CronTimerDef "larluo2" "*/4 * * *" (Just 2)]
+    []
+{--  
   let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
   let sql = "select schedule, command, jobid from cron.job"
   let parseCronName :: T.Text -> T.Text
@@ -107,22 +112,21 @@ initAppST = do
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
-  { _backend_run = \serve ->
+  { _backend_run = \serve -> do
       {-- void . keep  $ do
       chan <- liftIO $ newTBMChanIO 1000
       serverST <- liftIO $ initServerST
       liftIO $ readMVar serverST >>= print
       async (eventGenerator chan) <|> (liftIO $
       --}
+      appST <- liftIO $ initAppST
       serve $ do
         \case
           BackendRoute_Missing :=> _ -> return ()
           BackendRoute_API :=> _ -> do
             liftSnap $ serveSnap (Proxy::Proxy MyAPI) myAPI
           BackendRoute_WSConduit :=> _ -> do
-            runWebSocketsSnap wsConduitApp
---          BackendRoute_WSConduitV2 :=> _ -> do
---            runWebSocketsSnap (wsConduitV2App serverST chan)
+            runWebSocketsSnap (wsConduitApp appST)
   , _backend_routeEncoder = backendRouteEncoder
   }
 

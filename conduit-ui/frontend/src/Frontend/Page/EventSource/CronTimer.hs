@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 module Frontend.Page.EventSource.CronTimer (eventSource_cronTimer) where
+
 import Common.WebSocketMessage
 import Prelude
 
@@ -17,10 +18,13 @@ import Control.Monad.Fix (MonadFix)
 eventSource_cronTimer
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => Event t WSResponseMessage -> m (Event t WSRequestMessage)
-eventSource_cronTimer wsEvt = do
-  wsDyn <- foldDyn (++) [] $ ffor wsEvt $ \case
-             (WSResponseInit (AppST cronTimerSTs _)) -> cronTimerSTs
+  => Dynamic t (Maybe WSResponseMessage)
+  -> Event t WSResponseMessage
+  -> m (Event t WSRequestMessage)
+eventSource_cronTimer wsInit wsEvt = do
+  let wsDyn = ffor wsInit $ \case
+                Nothing -> []
+                Just (WSResponseInit (AppST cronTimerSTs _)) -> cronTimerSTs
   elClass "table" "ui collapsing table" $ do
     el "thead" $ el "tr" $ do
       el "th" $ checkbox False def

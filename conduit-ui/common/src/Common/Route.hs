@@ -45,6 +45,7 @@ deriving instance Show (APIRoute a)
 
 data FrontendRoute :: * -> * where
   FrontendRoute_Main :: FrontendRoute ()
+  FrontendRoute_DataNetwork :: FrontendRoute (R DataNetworkRoute)
 --  FrontendRoute_EventSource :: FrontendRoute (Maybe (R EventSourceRoute))
   FrontendRoute_EventSource :: FrontendRoute (R EventSourceRoute)
 --  FrontendRoute_DataSource :: FrontendRoute (Maybe (R DataSourceRoute))
@@ -55,8 +56,14 @@ data FrontendRoute :: * -> * where
   FrontendRoute_LambdaLib :: FrontendRoute (R LambdaLibRoute)
 deriving instance Show (FrontendRoute a)
 
+data DataNetworkRoute :: * -> * where
+  DataNetworkRoute_OneClickRun :: DataNetworkRoute ()
+  DataNetworkRoute_LogicFragement :: DataNetworkRoute ()
+  DataNetworkRoute_DataConduit :: DataNetworkRoute ()
+  DataNetworkRoute_DataCircuit :: DataNetworkRoute ()
+deriving instance Show (DataNetworkRoute a)
+
 data EventSourceRoute :: * -> * where
-  EventSourceRoute_OneClickRun :: EventSourceRoute ()
   EventSourceRoute_HttpRequest :: EventSourceRoute ()
   EventSourceRoute_CronTimer :: EventSourceRoute ()
   EventSourceRoute_FileWatcher :: EventSourceRoute ()
@@ -93,15 +100,20 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
         maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
           APIRoute_Ping -> PathSegment "ping" $ unitEncoder mempty
       BackendRoute_WSConduit -> PathSegment "wsConduit" $ unitEncoder mempty
-      BackendRoute_WSConduitV2 -> PathSegment "wsConduitV2" $ unitEncoder mempty      
+      BackendRoute_WSConduitV2 -> PathSegment "wsConduitV2" $ unitEncoder mempty
     InR obeliskRoute -> obeliskRouteSegment obeliskRoute $ \case
       -- The encoder given to PathEnd determines how to parse query parameters,
       -- in this example, we have none, so we insist on it.
       FrontendRoute_Main -> PathEnd $ unitEncoder mempty
+      FrontendRoute_DataNetwork -> PathSegment "dataNetwork" $
+        pathComponentEncoder $ \case
+          DataNetworkRoute_OneClickRun -> PathSegment "oneClickRun" $ unitEncoder mempty
+          DataNetworkRoute_LogicFragement -> PathSegment "logicFragement" $ unitEncoder mempty
+          DataNetworkRoute_DataConduit -> PathSegment "dataConduit" $ unitEncoder mempty
+          DataNetworkRoute_DataCircuit -> PathSegment "dataCircuit" $ unitEncoder mempty
       FrontendRoute_EventSource -> PathSegment "eventSource" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
-          EventSourceRoute_OneClickRun -> PathSegment "oneClickRun" $ unitEncoder mempty
           EventSourceRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
           EventSourceRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
           EventSourceRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
@@ -132,6 +144,7 @@ concat <$> mapM deriveRouteComponent
   , ''APIRoute
   
   , ''FrontendRoute
+  , ''DataNetworkRoute  
   , ''EventSourceRoute
   , ''DataSourceRoute
   , ''StateContainerRoute
