@@ -61,6 +61,9 @@ import Text.Heredoc (str)
 import qualified Data.Aeson as J
 import Text.Regex.TDFA ((=~))
 
+import System.Random (randomRIO)
+
+
 eventGenerator :: TBMChan B.ByteString -> IO ()
 eventGenerator chan = do
   threadDelay (1000 * 1000 * 5)
@@ -73,27 +76,35 @@ type MyAPI = "api" :> "ping" :> Get '[PlainText] String
 myAPI :: Snap String
 myAPI = return "pong\n"
 
+wsHandle :: WSRequestMessage -> IO WSResponseMessage
+wsHandle = \case
+  HaskellCodeRunRequest r ->
+    return . HaskellCodeRunResponse . mapLeft show =<< (I.runInterpreter . dynHaskell) r
+  CronTimerCreateRequest (CronTimer name expr Nothing) -> do
+    rid <- randomRIO (10, 100)
+    return . CronTimerCreateResponse . Right $ CronTimer name expr (Just rid)
+  CronTimerUpdateRequest r ->
+    return . CronTimerCreateResponse . Right $ r
+  unknown ->
+    return . WSResponseUnknown $ unknown
+
 wsConduitApp :: MVar AppST -> WS.ServerApp
 wsConduitApp appST pending= do
   putStrLn "websocket connection accepted ..."
   conn <- WS.acceptRequest pending
-  readMVar appST >>= WS.sendTextData conn . J.encode . WSResponseInit
+  readMVar appST >>= WS.sendTextData conn . J.encode . WSInitResponse
+
   runConduit
     $ (forever $ liftIO (WS.receiveData conn) >>= yield . J.decode)
    .| CL.mapMaybe (id @(Maybe WSRequestMessage))
-   .| C.mapM (\case
-                 HaskellCodeRunRequest r ->
-                   return . WSResponseMore . HaskellCodeRunResponse . mapLeft show =<< (I.runInterpreter . dynHaskell) r
-                 unknown ->
-                   (return . WSResponseUnknown) unknown)
+   .| C.mapM wsHandle
    .| C.mapM_ (WS.sendTextData conn . J.encode)
 
 initAppST :: IO (MVar AppST)
 initAppST = do
   newMVar $ AppST
-    [ CronTimerDef "larluo1" "*/5 * * *" (Just 1)
-    , CronTimerDef "larluo2" "*/4 * * *" (Just 2)]
-    []
+    [ CronTimer "larluo1" "*/5 * * *" (Just 1)
+    , CronTimer "larluo2" "*/4 * * *" (Just 2)]
 {--  
   let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
   let sql = "select schedule, command, jobid from cron.job"

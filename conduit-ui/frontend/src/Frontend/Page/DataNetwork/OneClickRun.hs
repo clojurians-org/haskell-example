@@ -50,13 +50,10 @@ exampleCode = unlines [
 dataNetwork_oneClickRun
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => Dynamic t (Maybe WSResponseMessage)
-  -> Event t WSResponseMessage
+  => Event t WSResponseMessage
   -> m (Event t WSRequestMessage)
-dataNetwork_oneClickRun wsInit wsEvt = do
-  let wsHaskellCodeRunEvt = fforMaybe wsEvt $ \case
-        (WSResponseMore (HaskellCodeRunResponse r)) -> Just r
-        _ -> Nothing
+dataNetwork_oneClickRun wsResponseEvt = do
+  let wsEvt = ffilter isHaskellCodeRunResponse wsResponseEvt
   divClass "ui segment basic" $
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do
@@ -69,6 +66,5 @@ dataNetwork_oneClickRun wsInit wsEvt = do
       divClass "ui field" $
         textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
                               & textAreaElementConfig_initialValue .~ ""
-                              & textAreaElementConfig_setValue .~ (fmap (cs . show) wsHaskellCodeRunEvt)
+                              & textAreaElementConfig_setValue .~ (fmap (cs . show) wsEvt)
       return $ tag (fmap HaskellCodeRunRequest . current . value $ myInput) runEvt
-

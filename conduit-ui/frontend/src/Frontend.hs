@@ -44,12 +44,19 @@ import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
 import System.Random (randomRIO)
 
+combine :: (b -> c -> d) -> (a -> b) -> (a -> c) -> (a -> d)
+combine op f g = \x -> f x `op` g x
+
+(&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(&&&) = combine (&&)
+infixr 3 &&&
+
+
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
   elAttr "link" ( "rel" =: "stylesheet"
                <> "href" =: "https://cdn.jsdelivr.net/npm/semantic-ui@2.3.3/dist/semantic.min.css") blank
 
---  el "table" 
 nav :: forall t js m. ( DomBuilder t m, Prerender js m
         , PerformEvent t m, TriggerEvent t m, PostBuild t m
         , RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m) => m ()
@@ -127,20 +134,20 @@ page :: forall t js m.
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
   )
-  => Dynamic t (Maybe WSResponseMessage)
-  -> Event t WSResponseMessage
+  => Event t WSResponseMessage
   -> RoutedT t (R FrontendRoute) m (Event t WSRequestMessage)
-page wsInit wsEvt = do
+page wsResponseEvt = do
+  pb <- getPostBuild 
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
       FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
-        DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun wsInit wsEvt
+        DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun wsResponseEvt
         DataNetworkRoute_LogicFragement -> text " DataNetworkRoute_LogicFragement" >> return never
         DataNetworkRoute_DataConduit -> text " DataNetworkRoute_DataConduit" >> return never
         DataNetworkRoute_DataCircuit -> text " DataNetworkRoute_DataCircuit" >> return never        
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
-        EventSourceRoute_CronTimer -> eventSource_cronTimer wsInit wsEvt
+        EventSourceRoute_CronTimer -> eventSource_cronTimer wsResponseEvt
         EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
       FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
         DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
@@ -178,16 +185,17 @@ frontend = Frontend
                              <|> Just "localhost:8000"
       let wsURL = "ws://" <> hostPort <> "/wsConduit"
       rec
-        (wsInitEvt, wsRecvEvt) <- headTailE =<< handleWSRequest wsURL wsSendEvt
-        wsInitST <- holdDyn Nothing (fmap Just wsInitEvt)
-        wsSendEvt <- do
+        wsResponseEvt <- handleWSRequest wsURL wsRequestEvt
+--        (wsInitEvt, wsRecvEvt) <- headTailE =<< handleWSRequest wsURL wsSendEvt
+--        wsInitST <- holdDyn Nothing (fmap Just wsInitEvt)
+        wsRequestEvt <- do
           divClass "ui message icon" $ do
             elClass "i" "notched circle loading icon" blank
             elClass "h1" "ui header" $
               routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
             divClass "ui two wide column vertical menu visible" $ nav
-            divClass "ui fourteen wide column container" $ page wsInitST  wsRecvEvt
+            divClass "ui fourteen wide column container" $ page wsResponseEvt
       return ()
   }
 
