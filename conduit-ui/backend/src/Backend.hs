@@ -85,6 +85,9 @@ wsHandle = \case
     return . CronTimerCreateResponse . Right $ CronTimer name expr (Just rid)
   CronTimerUpdateRequest r -> do
     return . CronTimerUpdateResponse . Right $ r
+  CronTimerDeleteRequest r -> do
+    putStrLn $ "CronTimerDeleteResponse: " ++ (show r)
+    return . CronTimerDeleteResponse . Right $ r
   unknown ->
     return . WSResponseUnknown $ unknown
 
