@@ -142,7 +142,7 @@ page :: forall t js m r.
   )
   => MVar r
   -> Event t WSResponseMessage
-  -> RoutedT t (R FrontendRoute) m (Event t WSRequestMessage)
+  -> RoutedT t (R FrontendRoute) m (Event t [WSRequestMessage])
 page wsST wsResponseEvt = do
   let wsSTNotUsed = undefined  
   dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
@@ -178,11 +178,11 @@ page wsST wsResponseEvt = do
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m)
-  => T.Text -> Event t WSRequestMessage -> m (Event t WSResponseMessage)
-handleWSRequest wsURL wsRequest =
+  => T.Text -> Event t [WSRequestMessage] -> m (Event t WSResponseMessage)
+handleWSRequest wsURL wsRequests =
   prerender (return never) $ do
     ws <- webSocket wsURL $
-      def & webSocketConfig_send .~ (fmap ((:[]) . J.encode) wsRequest)
+      def & webSocketConfig_send .~ ((fmap . fmap) J.encode wsRequests)
     return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
 
 mkWSStateContainer :: IO (MVar ("eventSource_cronTimer" := [CronTimer]))

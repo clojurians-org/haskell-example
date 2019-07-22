@@ -68,7 +68,7 @@ dataNetwork_oneClickRun
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
   => Event t T.Text
-  -> m (Event t WSRequestMessage)
+  -> m (Event t [WSRequestMessage])
 dataNetwork_oneClickRun wsEvt = do
   divClass "ui segment basic" $
     divClass "ui form" $ do
@@ -83,4 +83,4 @@ dataNetwork_oneClickRun wsEvt = do
         textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
                               & textAreaElementConfig_initialValue .~ ""
                               & textAreaElementConfig_setValue .~ wsEvt
-      return $ tag (fmap HaskellCodeRunRequest . current . value $ myInput) runEvt
+      return $ fmap (:[]) $ tagPromptlyDyn (fmap HaskellCodeRunRequest . value $ myInput) runEvt

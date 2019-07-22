@@ -31,7 +31,7 @@ instance J.ToJSON AppST
 instance J.FromJSON AppST
 instance Default AppST
 
-data WSRequestEvent = HaskellCodeRunRequest T.Text
+data WSRequestMessage = HaskellCodeRunRequest T.Text
                     | CronTimerCreateRequest CronTimer
                     | CronTimerReadRequest Int64
                     | CronTimerUpdateRequest CronTimer
@@ -39,10 +39,10 @@ data WSRequestEvent = HaskellCodeRunRequest T.Text
                     | CronTimerActiveRequest Int64
                     | CronTimerKillRequest Int64
   deriving (Generic, Show)
-instance J.ToJSON WSRequestEvent
-instance J.FromJSON WSRequestEvent
+instance J.ToJSON WSRequestMessage
+instance J.FromJSON WSRequestMessage
 
-data WSResponseEvent = WSInitResponse AppST
+data WSResponseMessage = WSInitResponse AppST
                      | HaskellCodeRunResponse (Either String ())
                      | CronTimerCreateResponse (Either String CronTimer)
                      | CronTimerReadResponse (Either String CronTimer)
@@ -52,11 +52,12 @@ data WSResponseEvent = WSInitResponse AppST
                      | CronTimerKillResponse (Either String Int64)
                      | WSResponseUnknown WSRequestMessage
   deriving (Generic, Show)
-instance J.ToJSON WSResponseEvent
-instance J.FromJSON WSResponseEvent
+instance J.ToJSON WSResponseMessage
+instance J.FromJSON WSResponseMessage
 
-type WSRequestMessage = WSRequestEvent
-type WSResponseMessage = WSResponseEvent
+isCronTimerDeleteRequest :: WSRequestMessage -> Bool
+isCronTimerDeleteRequest (CronTimerDeleteRequest  _) = True
+isCronTimerDeleteRequest _ = False
 
 isWSInitResponse :: WSResponseMessage -> Bool
 isWSInitResponse (WSInitResponse _) = True
