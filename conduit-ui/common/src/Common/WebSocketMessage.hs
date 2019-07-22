@@ -21,6 +21,9 @@ data CronTimer = CronTimer {
 instance J.ToJSON CronTimer
 instance J.FromJSON CronTimer
 
+isSameCronXID :: CronTimer -> CronTimer -> Bool
+isSameCronXID (CronTimer _  _ id1) (CronTimer _  _ id2) = id1 == id2
+
 data AppST = AppST {
     _appST_cronTimers :: [CronTimer]
   } deriving (Generic, Show)

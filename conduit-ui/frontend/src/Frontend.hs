@@ -7,12 +7,13 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Frontend where
 
 import Common.WebSocketMessage
-import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer)
-import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun)
+import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
+import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
 
 import Prelude
 
@@ -43,6 +44,9 @@ import Text.Regex.TDFA ((=~))
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
 import System.Random (randomRIO)
+import Control.Concurrent (MVar, newMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
+
+import Labels ((:=)(..), Has)
 
 combine :: (b -> c -> d) -> (a -> b) -> (a -> c) -> (a -> d)
 combine op f g = \x -> f x `op` g x
@@ -129,25 +133,31 @@ nav = do
       divClass "item" $ text "HDFS"
       divClass "item" $ text "Ftp/SFtp"
 
-page :: forall t js m.
+page :: forall t js m r.
   ( DomBuilder t m, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
+  , MonadIO m, MonadIO (Performable m)
+  , Has "eventSource_cronTimer" [CronTimer] r
   )
-  => Event t WSResponseMessage
+  => MVar r
+  -> Event t WSResponseMessage
   -> RoutedT t (R FrontendRoute) m (Event t WSRequestMessage)
-page wsResponseEvt = do
-  pb <- getPostBuild 
+page wsST wsResponseEvt = do
+  let wsSTNotUsed = undefined  
+  dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
+  eventSource_cronTimer_st <- eventSource_cronTimer_handle wsST wsResponseEvt
+
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
       FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
-        DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun wsResponseEvt
+        DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun dataNetwork_oneClickRun_st
         DataNetworkRoute_LogicFragement -> text " DataNetworkRoute_LogicFragement" >> return never
         DataNetworkRoute_DataConduit -> text " DataNetworkRoute_DataConduit" >> return never
         DataNetworkRoute_DataCircuit -> text " DataNetworkRoute_DataCircuit" >> return never        
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
-        EventSourceRoute_CronTimer -> eventSource_cronTimer wsResponseEvt
+        EventSourceRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
         EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
       FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
         DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
@@ -175,6 +185,10 @@ handleWSRequest wsURL wsRequest =
       def & webSocketConfig_send .~ (fmap ((:[]) . J.encode) wsRequest)
     return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
 
+mkWSStateContainer :: IO (MVar ("eventSource_cronTimer" := [CronTimer]))
+mkWSStateContainer = newMVar
+  ( #eventSource_cronTimer := [] )
+
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
@@ -184,10 +198,10 @@ frontend = Frontend
                              <|> T.stripPrefix "http://" configRoute
                              <|> Just "localhost:8000"
       let wsURL = "ws://" <> hostPort <> "/wsConduit"
+
+      wsST <- liftIO mkWSStateContainer
       rec
         wsResponseEvt <- handleWSRequest wsURL wsRequestEvt
---        (wsInitEvt, wsRecvEvt) <- headTailE =<< handleWSRequest wsURL wsSendEvt
---        wsInitST <- holdDyn Nothing (fmap Just wsInitEvt)
         wsRequestEvt <- do
           divClass "ui message icon" $ do
             elClass "i" "notched circle loading icon" blank
@@ -195,7 +209,7 @@ frontend = Frontend
               routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
             divClass "ui two wide column vertical menu visible" $ nav
-            divClass "ui fourteen wide column container" $ page wsResponseEvt
+            divClass "ui fourteen wide column container" $ page wsST wsResponseEvt
       return ()
   }
 

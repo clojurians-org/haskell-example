@@ -83,8 +83,8 @@ wsHandle = \case
   CronTimerCreateRequest (CronTimer name expr Nothing) -> do
     rid <- randomRIO (10, 100)
     return . CronTimerCreateResponse . Right $ CronTimer name expr (Just rid)
-  CronTimerUpdateRequest r ->
-    return . CronTimerCreateResponse . Right $ r
+  CronTimerUpdateRequest r -> do
+    return . CronTimerUpdateResponse . Right $ r
   unknown ->
     return . WSResponseUnknown $ unknown
 

@@ -1,7 +1,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun) where
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+
+module Frontend.Page.DataNetwork.OneClickRun
+  (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun) where
 
 import Common.WebSocketMessage
 import Prelude
@@ -12,6 +17,9 @@ import Control.Monad.Fix (MonadFix)
 
 import qualified Data.Text as T
 import Data.String.Conversions (cs)
+
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Concurrent (MVar, newMVar, putMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
 
 exampleCode :: String
 exampleCode = unlines [
@@ -47,13 +55,21 @@ exampleCode = unlines [
         , "            .| C.mapM_ (liftIO . print))"
         ]
 
+
+dataNetwork_oneClickRun_handle
+  :: forall t m r.
+     ( MonadHold t m, MonadFix m
+     , MonadIO m, MonadIO (Performable m), PerformEvent t m)
+  => MVar r -> Event t WSResponseMessage -> m (Event t T.Text)
+dataNetwork_oneClickRun_handle _ wsResponseEvt = do
+  return $ fmap (cs . show) $ ffilter isHaskellCodeRunResponse wsResponseEvt
+
 dataNetwork_oneClickRun
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => Event t WSResponseMessage
+  => Event t T.Text
   -> m (Event t WSRequestMessage)
-dataNetwork_oneClickRun wsResponseEvt = do
-  let wsEvt = ffilter isHaskellCodeRunResponse wsResponseEvt
+dataNetwork_oneClickRun wsEvt = do
   divClass "ui segment basic" $
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do
@@ -66,5 +82,5 @@ dataNetwork_oneClickRun wsResponseEvt = do
       divClass "ui field" $
         textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
                               & textAreaElementConfig_initialValue .~ ""
-                              & textAreaElementConfig_setValue .~ (fmap (cs . show) wsEvt)
+                              & textAreaElementConfig_setValue .~ wsEvt
       return $ tag (fmap HaskellCodeRunRequest . current . value $ myInput) runEvt
