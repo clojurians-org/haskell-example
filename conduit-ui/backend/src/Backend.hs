@@ -84,11 +84,13 @@ wsHandle = \case
     rid <- randomRIO (10, 100)
     return . CronTimerCreateResponse . Right $ CronTimer name expr (Just rid)
   CronTimerUpdateRequest r -> do
+    putStrLn $ "CronTimerUpdateResponse: " ++ (show r)    
     return . CronTimerUpdateResponse . Right $ r
   CronTimerDeleteRequest r -> do
     putStrLn $ "CronTimerDeleteResponse: " ++ (show r)
     return . CronTimerDeleteResponse . Right $ r
-  unknown ->
+  unknown -> do
+    putStrLn $ "CronTimerDeleteResponse: " ++ (show unknown)    
     return . WSResponseUnknown $ unknown
 
 wsConduitApp :: MVar AppST -> WS.ServerApp

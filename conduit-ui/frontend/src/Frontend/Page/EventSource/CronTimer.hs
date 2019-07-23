@@ -86,7 +86,7 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
     el "thead" $ el "tr" $ do
       el "th" $ checkbox False def
       el "th" $ text "Cron表达式"
-      el "th" $ text "名称"
+      el "th" $ text "事件名称"
     cronTimerPayloadEvt <- 
       el "tbody" $ do
         createEvt <- 

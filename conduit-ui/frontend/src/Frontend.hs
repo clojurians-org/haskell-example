@@ -12,8 +12,9 @@
 module Frontend where
 
 import Common.WebSocketMessage
-import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
 import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
+import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
+import Frontend.Page.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
 import Prelude
 
@@ -63,7 +64,8 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_OneClickRun :/ ()) $ text "一键实时" 
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_LogicFragement :/ ()) $ text "逻辑碎片"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataConduit :/ ()) $ text "数据导管"
-      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataCircuit :/ ()) $ text "数据电路" 
+      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataCircuit :/ ()) $ text "数据电路"
+      
   divClass "item" $ do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
@@ -118,6 +120,7 @@ nav = do
     divClass "menu" $ do
       divClass "item" $ text "WebHook"
       divClass "item" $ text "Email"
+      
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据存储接口"
     divClass "menu" $ do
@@ -139,6 +142,7 @@ page wsST wsResponseEvt = do
   let wsSTNotUsed = undefined  
   dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
   eventSource_cronTimer_st <- eventSource_cronTimer_handle wsST wsResponseEvt
+  dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsST wsResponseEvt
 
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
@@ -155,7 +159,7 @@ page wsST wsResponseEvt = do
         DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
         DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
         DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
-        DataSourceRoute_SQLCursor -> text "my DataSourceRoute_SQLCursor" >> return never
+        DataSourceRoute_SQLCursor -> dataSource_sqlCursor dataSource_sqlCursor_st
         DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never        
       FrontendRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
         StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
