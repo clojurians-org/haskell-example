@@ -67,6 +67,7 @@ isHaskellCodeRunResponse :: WSResponseMessage -> Bool
 isHaskellCodeRunResponse (HaskellCodeRunResponse  _) = True
 isHaskellCodeRunResponse _ = False
 
+
 isCronTimerCreateResponse :: WSResponseMessage -> Bool
 isCronTimerCreateResponse (CronTimerCreateResponse  _) = True
 isCronTimerCreateResponse _ = False
@@ -74,4 +75,25 @@ isCronTimerCreateResponse _ = False
 isCronTimerUpdateResponse :: WSResponseMessage -> Bool
 isCronTimerUpdateResponse (CronTimerUpdateResponse  _) = True
 isCronTimerUpdateResponse _ = False
+
+isCronTimerDeleteResponse :: WSResponseMessage -> Bool
+isCronTimerDeleteResponse (CronTimerDeleteResponse  _) = True
+isCronTimerDeleteResponse _ = False
+
+
+isCronTimerResponse :: WSResponseMessage -> Bool
+isCronTimerResponse x = isCronTimerCreateResponse x
+                     || isCronTimerUpdateResponse x
+                     || isCronTimerDeleteResponse x
+
+combine :: (b -> c -> d) -> (a -> b) -> (a -> c) -> (a -> d)
+combine op f g = \x -> f x `op` g x
+
+(&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(&&&) = combine (&&)
+infixr 3 &&&
+
+(|||) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
+(|||) = combine (||)
+infixr 3 |||
 

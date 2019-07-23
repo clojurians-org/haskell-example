@@ -32,14 +32,17 @@ import Data.Maybe (mapMaybe)
 import GHC.Int (Int64)
 
 data DeleteSelectPayload = DeleteSelect Int64 | DeleteUnselect Int64
-data CronTimerEventAndPayload a = CronTimerEvent WSRequestMessage | CronTimerPayload a
+data CronTimerEventAndPayload a = CronTimerRequestEvent WSRequestMessage
+                                | CronTimerResponseEvent WSResponseMessage
+                                | CronTimerUnitEvent ()
+                                | CronTimerPayload a 
 
 isCronTimerEvent :: CronTimerEventAndPayload a -> Bool
-isCronTimerEvent (CronTimerEvent x) = True
+isCronTimerEvent (CronTimerRequestEvent x) = True
 isCronTimerEvent _ = False
 
 fromCronTimerEvent :: CronTimerEventAndPayload a -> Maybe WSRequestMessage
-fromCronTimerEvent (CronTimerEvent x) = Just x
+fromCronTimerEvent (CronTimerRequestEvent x) = Just x
 fromCronTimerEvent _  = Nothing
 
 fromCronTimerPayload :: CronTimerEventAndPayload a -> Maybe a
@@ -51,8 +54,10 @@ eventSource_cronTimer_handle
      ( MonadHold t m, MonadFix m
      , MonadIO m, MonadIO (Performable m), PerformEvent t m
      , Has "eventSource_cronTimer" [CronTimer] r)
-  => MVar r -> Event t WSResponseMessage -> m (Dynamic t [CronTimer])
+  => MVar r -> Event t WSResponseMessage
+  -> m (Event t WSResponseMessage, Dynamic t [CronTimer])
 eventSource_cronTimer_handle wsST wsResponseEvt = do
+  let wsEvt = ffilter (isWSInitResponse ||| isCronTimerCreateResponse ||| isCronTimerUpdateResponse ||| isCronTimerDeleteResponse) wsResponseEvt
   myST <- liftIO $ readMVar wsST
   wsDyn <- foldDyn (\wsMsg xs -> case wsMsg of
                        WSInitResponse (AppST cronTimers)  -> cronTimers ++ xs
@@ -60,11 +65,12 @@ eventSource_cronTimer_handle wsST wsResponseEvt = do
                        CronTimerUpdateResponse (Right cronTimer) -> cronTimer : filter (not . isSameCronXID cronTimer) xs
                        CronTimerDeleteResponse (Right cronId) -> filter ((/= cronId) . fromJust . ce_xid) xs
                        _ -> xs)
-             (get #eventSource_cronTimer myST) wsResponseEvt
+             (get #eventSource_cronTimer myST) wsEvt
   performEvent $ do
     ffor (updated wsDyn) $ \xs ->  do
       liftIO $ modifyMVar_ wsST $ return . set #eventSource_cronTimer xs
-  return (fmap (sortOn ce_name) wsDyn)
+      
+  return (wsEvt, (fmap (sortOn ce_name) wsDyn))
 
 keydownExclude :: (Reflex t, HasDomEvent t e 'KeydownTag, DomEventType e 'KeydownTag ~ Word) => Key -> e -> Event t ()
 keydownExclude key = fmapMaybe (\n -> guard $ keyCodeLookup (fromIntegral n) /= key) . domEvent Keydown
@@ -72,9 +78,10 @@ keydownExclude key = fmapMaybe (\n -> guard $ keyCodeLookup (fromIntegral n) /= 
 eventSource_cronTimer
   :: forall t m.
      ( DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => Dynamic t [CronTimer]
+  => (Event t WSResponseMessage, Dynamic t [CronTimer])
   -> m (Event t [WSRequestMessage])
-eventSource_cronTimer wsDyn = do
+eventSource_cronTimer (wsEvt, wsDyn) = do
+  -- holdDyn "" (cs . show <$> wsEvt) >>= dynText  
   elClass "table" "ui collapsing table" $ do
     el "thead" $ el "tr" $ do
       el "th" $ checkbox False def
@@ -85,19 +92,19 @@ eventSource_cronTimer wsDyn = do
         createEvt <- 
           elClass "tr" "warning" $ do
             el "td" $ elClass "i" "notched circle loading icon" blank
-            rec
-              let cronExprEnterEvt = keypress Enter newCronExpr
-              let cronNameEnterEvt = keypress Enter newCronName
-              let mkCreateRequest =
-                    fmap CronTimerCreateRequest $ CronTimer
-                      <$> value newCronName
-                      <*> value newCronExpr
-                      <*> return Nothing
-
-              newCronExpr <- el "td" $ inputElement def
-              newCronName <- el "td" $ inputElement def
-            return $ mergeList [ tagPromptlyDyn (CronTimerEvent <$> mkCreateRequest) cronExprEnterEvt
-                               , tagPromptlyDyn (CronTimerEvent <$> mkCreateRequest) cronNameEnterEvt]
+            newCronExpr <- el "td" $ inputElement def
+            newCronName <- el "td" $ inputElement def
+            
+            let cronExprEnterEvt = keypress Enter newCronExpr
+            let cronNameEnterEvt = keypress Enter newCronName
+            let mkCreateRequest =
+                  fmap CronTimerCreateRequest $ CronTimer
+                    <$> value newCronName
+                    <*> value newCronExpr
+                    <*> return Nothing
+            
+            return $ mergeList [ tagPromptlyDyn (CronTimerRequestEvent <$> mkCreateRequest) cronExprEnterEvt
+                               , tagPromptlyDyn (CronTimerRequestEvent <$> mkCreateRequest) cronNameEnterEvt]
 
         updateAndDeletePayloadEvt  <- 
           fmap (switchDyn . fmap (mergeWith (<>))) $ simpleList wsDyn $ \cronDyn -> do          
@@ -125,14 +132,13 @@ eventSource_cronTimer wsDyn = do
                                <*> fmap ce_xid cronDyn
 
                 let mkDeletePayload
-                      = fmap CronTimerPayload $
-                          (\v xid -> case v of
-                                   True -> DeleteSelect xid
-                                   False -> DeleteUnselect xid)
-                               <$> value deleteSelect
-                               <*> fmap (fromJust . ce_xid) cronDyn
+                      =  (\case
+                              True -> DeleteSelect 
+                              False -> DeleteUnselect)
+                           <$> value deleteSelect
+                           <*> fmap (fromJust . ce_xid) cronDyn
 
-                deleteSelect <- el "td" (checkbox False def)
+                deleteSelect <- el "td" $ checkbox False (def & checkboxConfig_setValue .~ (False <$ wsEvt))
                 updateCronExpr <- elDynAttr "td" conrExprDyn $ inputElement $ def 
                   & inputElementConfig_setValue .~ leftmost
                       [ fmap ce_expr cronEvt
@@ -141,25 +147,32 @@ eventSource_cronTimer wsDyn = do
                   & inputElementConfig_setValue .~ leftmost
                       [ fmap ce_name cronEvt
                       , tag (fmap ce_name cronBehavior)  pb]
-                
-              return $ mergeList [ tagPromptlyDyn (CronTimerEvent <$> mkUpdateRequest) cronExprEnterEvt
-                                 , tagPromptlyDyn (CronTimerEvent <$> mkUpdateRequest) cronNameEnterEvt
-                                 , tagPromptlyDyn (CronTimerPayload . DeleteSelect . fromJust . ce_xid <$> cronDyn) deleteSelectEvt
+
+                -- dynText $ cs . show . fromJust . ce_xid <$> cronDyn
+              return $ mergeList [ tagPromptlyDyn (CronTimerRequestEvent <$> mkUpdateRequest) cronExprEnterEvt
+                                 , tagPromptlyDyn (CronTimerRequestEvent <$> mkUpdateRequest) cronNameEnterEvt
+                                 , tagPromptlyDyn (CronTimerPayload <$> mkDeletePayload) deleteSelectEvt
                                  ]
         return $ mergeWith (++) [ fmap toList createEvt 
                                 , fmap toList updateAndDeletePayloadEvt]
-    deleteEvt :: Event t [WSRequestMessage] <- el "tfoot" $ el "tr" $ do
-      let deleteSelectEvt = mapMaybe fromCronTimerPayload <$> cronTimerPayloadEvt
+    deleteEvt  <- el "tfoot" $ el "tr" $ do
+
       let foldPayloads payloads xs0 =
             foldl' (\xs payload -> case payload of
-                      DeleteSelect x -> x : filter (/= x) xs
-                      DeleteUnselect x -> filter (/= x) xs)
+                      CronTimerPayload (DeleteSelect x) -> x : filter (/= x) xs
+                      CronTimerPayload (DeleteUnselect x) -> filter (/= x) xs
+                      CronTimerResponseEvent (CronTimerDeleteResponse _) -> []
+                      _ -> xs)
                    xs0 payloads
-      deleteDyn <- foldDyn foldPayloads [] deleteSelectEvt
+      deleteDyn <- foldDyn foldPayloads []
+                       (mergeWith (++) [ cronTimerPayloadEvt
+                                       , (:[]) . CronTimerResponseEvent <$> wsEvt ])
+
       el "th" blank
-      deleteEvt :: Event t () <- elAttr "th" ("colspan" =: "2") $ do
-                       domEvent Click . fst <$> elClass' "button" "ui small button teal" (text "删除")
-      return (tagPromptlyDyn (fmap CronTimerDeleteRequest <$> deleteDyn) deleteEvt)
+      deleteEvt' <- elAttr "th" ("colspan" =: "2") $ do
+                         domEvent Click . fst <$> elClass' "button" "ui small button teal" (text "删除")
+      -- dynText $ cs . show  <$> deleteDyn
+      return (tagPromptlyDyn (fmap CronTimerDeleteRequest <$> deleteDyn) deleteEvt')
     return $ mergeWith (++) [ mapMaybe fromCronTimerEvent <$> cronTimerPayloadEvt
                             , deleteEvt ]
 

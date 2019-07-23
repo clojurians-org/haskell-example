@@ -48,14 +48,6 @@ import Control.Concurrent (MVar, newMVar, modifyMVar, modifyMVar_, readMVar, thr
 
 import Labels ((:=)(..), Has)
 
-combine :: (b -> c -> d) -> (a -> b) -> (a -> c) -> (a -> d)
-combine op f g = \x -> f x `op` g x
-
-(&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
-(&&&) = combine (&&)
-infixr 3 &&&
-
-
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
   elAttr "link" ( "rel" =: "stylesheet"
