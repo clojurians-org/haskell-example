@@ -13,6 +13,8 @@ module Frontend where
 
 import Common.WebSocketMessage
 import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
+import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
+import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
 import Frontend.Page.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
@@ -105,6 +107,12 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_SFtp :/ ()) $ text "Ftp/SFtp"
 
   divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时通知接口"
+    divClass "menu" $ do
+      divClass "item" $ text "WebHook"
+      divClass "item" $ text "Email"
+
+  divClass "item" $ do
     elClass "h4" "ui header" $ text "实时BI报表"
     divClass "menu" $ do
       divClass "item" $ text "公共报表"
@@ -112,21 +120,9 @@ nav = do
       divClass "item" $ text "报表开发器"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时通知接口"
-    divClass "menu" $ do
-      divClass "item" $ text "WebHook"
-      divClass "item" $ text "Email"
-      
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "函数式组件库"
-    divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_SerDe :/ ()) $ text "SerDe"
-      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDF :/ ()) $ text "UDF"
-      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDAF :/ ()) $ text "UDAF"
-      divClass "item" $ routeLink (FrontendRoute_LambdaLib :/ LambdaLibRoute_UDTF :/ ()) $ text "UDTF"
-  divClass "item" $ do
     elClass "h4" "ui header" $ text "实时ETL引擎"
     divClass "menu" $ do
+      divClass "item" $ text "Lambda组件库"      
       divClass "item" $ text "Conduit"
       divClass "item" $ text "SQL"
       divClass "item" $ text "规则引擎"
@@ -145,6 +141,9 @@ page :: forall t js m r.
 page wsST wsResponseEvt = do
   let wsSTNotUsed = undefined  
   dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
+  dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsST wsResponseEvt
+  dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsST wsResponseEvt
+  
   eventSource_cronTimer_st <- eventSource_cronTimer_handle wsST wsResponseEvt
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsST wsResponseEvt
 
@@ -152,8 +151,8 @@ page wsST wsResponseEvt = do
       FrontendRoute_Main -> text "my main" >> return never
       FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
         DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun dataNetwork_oneClickRun_st
-        DataNetworkRoute_LogicFragement -> text " DataNetworkRoute_LogicFragement" >> return never
-        DataNetworkRoute_DataConduit -> text " DataNetworkRoute_DataConduit" >> return never
+        DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
+        DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
         DataNetworkRoute_DataCircuit -> text " DataNetworkRoute_DataCircuit" >> return never        
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
@@ -169,11 +168,6 @@ page wsST wsResponseEvt = do
         StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
         StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
         StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
-      FrontendRoute_LambdaLib -> fmap switchDyn $ subRoute $ \case
-        LambdaLibRoute_SerDe -> text "my LambdaLibRoute_SerDe" >> return never
-        LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF" >> return never
-        LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
-        LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
       FrontendRoute_FileStorage -> fmap switchDyn $ subRoute $ \case
         FileStorageRoute_MinIO -> text "my FileStorageRoute_MinIO" >> return never
         FileStorageRoute_HDFS -> text "my FileStorageRoute_HDFS" >> return never

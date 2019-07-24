@@ -51,8 +51,6 @@ data FrontendRoute :: * -> * where
   FrontendRoute_DataSource :: FrontendRoute (R DataSourceRoute)
 --  FrontendRoute_StateContainer :: FrontendRoute (Maybe (R StateContainerRoute))
   FrontendRoute_StateContainer :: FrontendRoute (R StateContainerRoute)
---  FrontendRoute_LambdaLib :: FrontendRoute (Maybe (R LambdaLibRoute))
-  FrontendRoute_LambdaLib :: FrontendRoute (R LambdaLibRoute)
   FrontendRoute_FileStorage :: FrontendRoute (R FileStorageRoute)  
 deriving instance Show (FrontendRoute a)
 
@@ -82,12 +80,6 @@ data StateContainerRoute :: * -> * where
   StateContainerRoute_RocksDB :: StateContainerRoute ()
   StateContainerRoute_SQLLite :: StateContainerRoute ()
 deriving instance Show (StateContainerRoute a)
-
-data LambdaLibRoute :: * -> * where
-  LambdaLibRoute_SerDe :: LambdaLibRoute ()
-  LambdaLibRoute_UDF :: LambdaLibRoute ()
-  LambdaLibRoute_UDAF :: LambdaLibRoute ()
-  LambdaLibRoute_UDTF :: LambdaLibRoute ()
 
 data FileStorageRoute :: * -> * where
   FileStorageRoute_MinIO :: FileStorageRoute ()
@@ -135,13 +127,6 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
           StateContainerRoute_PostgreSQL -> PathSegment "postgreSQL" $ unitEncoder mempty        
           StateContainerRoute_RocksDB -> PathSegment "rocksDB" $ unitEncoder mempty
           StateContainerRoute_SQLLite -> PathSegment "sqlLite" $ unitEncoder mempty
-      FrontendRoute_LambdaLib -> PathSegment "lambdaLib" $
---        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
-        pathComponentEncoder $ \case
-          LambdaLibRoute_SerDe -> PathSegment "serDe" $ unitEncoder mempty
-          LambdaLibRoute_UDF -> PathSegment "udf" $ unitEncoder mempty
-          LambdaLibRoute_UDAF -> PathSegment "udaf" $ unitEncoder mempty
-          LambdaLibRoute_UDTF -> PathSegment "udtf" $ unitEncoder mempty
       FrontendRoute_FileStorage -> PathSegment "fileStorage" $
         pathComponentEncoder $ \case
           FileStorageRoute_MinIO -> PathSegment "minio" $ unitEncoder mempty
@@ -156,6 +141,5 @@ concat <$> mapM deriveRouteComponent
   , ''EventSourceRoute
   , ''DataSourceRoute
   , ''StateContainerRoute
-  , ''LambdaLibRoute
   , ''FileStorageRoute
   ]
