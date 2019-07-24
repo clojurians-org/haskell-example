@@ -88,6 +88,34 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_PostgreSQL :/ ()) $ text "PostgreSQL"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时查询接口"
+    divClass "menu" $ do
+      divClass "item" $ text "PostgREST"
+      divClass "item" $ text "ElasticSearch"
+      divClass "item" $ text "Hbase"
+      divClass "item" $ text "Kudu"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "文件存储接口"
+    divClass "menu" $ do
+      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_MinIO :/ ()) $ text "Minio"
+      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_HDFS :/ ()) $ text "HDFS"
+      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_SFtp :/ ()) $ text "Ftp/SFtp"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时BI报表"
+    divClass "menu" $ do
+      divClass "item" $ text "公共报表"
+      divClass "item" $ text "个人报表"
+      divClass "item" $ text "报表开发器"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "实时通知接口"
+    divClass "menu" $ do
+      divClass "item" $ text "WebHook"
+      divClass "item" $ text "Email"
       
   divClass "item" $ do
     elClass "h4" "ui header" $ text "函数式组件库"
@@ -102,31 +130,7 @@ nav = do
       divClass "item" $ text "Conduit"
       divClass "item" $ text "SQL"
       divClass "item" $ text "规则引擎"
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时服务接口"
-    divClass "menu" $ do
-      divClass "item" $ text "PostgREST"
-      divClass "item" $ text "ElasticSearch"
-      divClass "item" $ text "Hbase"
-      divClass "item" $ text "Kudu"
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时BI报表"
-    divClass "menu" $ do
-      divClass "item" $ text "公共报表"
-      divClass "item" $ text "个人报表"
-      divClass "item" $ text "报表开发器"
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时通知接口"
-    divClass "menu" $ do
-      divClass "item" $ text "WebHook"
-      divClass "item" $ text "Email"
       
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "数据存储接口"
-    divClass "menu" $ do
-      divClass "item" $ text "Minio"
-      divClass "item" $ text "HDFS"
-      divClass "item" $ text "Ftp/SFtp"
 
 page :: forall t js m r.
   ( DomBuilder t m, Prerender js m
@@ -170,6 +174,10 @@ page wsST wsResponseEvt = do
         LambdaLibRoute_UDF -> text "my LambdaLibRoute_UDF" >> return never
         LambdaLibRoute_UDAF -> text "my LambdaLibRoute_UDAF" >> return never
         LambdaLibRoute_UDTF -> text "my LambdaLibRoute_UDTF" >> return never
+      FrontendRoute_FileStorage -> fmap switchDyn $ subRoute $ \case
+        FileStorageRoute_MinIO -> text "my FileStorageRoute_MinIO" >> return never
+        FileStorageRoute_HDFS -> text "my FileStorageRoute_HDFS" >> return never
+        FileStorageRoute_SFtp -> text "my FileStorageRoute_SFtp" >> return never
 
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js m, MonadHold t m

@@ -53,6 +53,7 @@ data FrontendRoute :: * -> * where
   FrontendRoute_StateContainer :: FrontendRoute (R StateContainerRoute)
 --  FrontendRoute_LambdaLib :: FrontendRoute (Maybe (R LambdaLibRoute))
   FrontendRoute_LambdaLib :: FrontendRoute (R LambdaLibRoute)
+  FrontendRoute_FileStorage :: FrontendRoute (R FileStorageRoute)  
 deriving instance Show (FrontendRoute a)
 
 data DataNetworkRoute :: * -> * where
@@ -74,19 +75,24 @@ data DataSourceRoute :: * -> * where
   DataSourceRoute_RestAPI :: DataSourceRoute ()  
   DataSourceRoute_SQLCursor :: DataSourceRoute ()
   DataSourceRoute_Minio :: DataSourceRoute ()
-
 deriving instance Show (DataSourceRoute a)
 
 data StateContainerRoute :: * -> * where
   StateContainerRoute_PostgreSQL :: StateContainerRoute ()  
   StateContainerRoute_RocksDB :: StateContainerRoute ()
   StateContainerRoute_SQLLite :: StateContainerRoute ()
+deriving instance Show (StateContainerRoute a)
 
 data LambdaLibRoute :: * -> * where
   LambdaLibRoute_SerDe :: LambdaLibRoute ()
   LambdaLibRoute_UDF :: LambdaLibRoute ()
   LambdaLibRoute_UDAF :: LambdaLibRoute ()
   LambdaLibRoute_UDTF :: LambdaLibRoute ()
+
+data FileStorageRoute :: * -> * where
+  FileStorageRoute_MinIO :: FileStorageRoute ()
+  FileStorageRoute_HDFS :: FileStorageRoute ()
+  FileStorageRoute_SFtp :: FileStorageRoute ()
   -- This type is used to define frontend routes, i.e. ones for which the backend will serve the frontend.
 
 backendRouteEncoder
@@ -136,7 +142,11 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
           LambdaLibRoute_UDF -> PathSegment "udf" $ unitEncoder mempty
           LambdaLibRoute_UDAF -> PathSegment "udaf" $ unitEncoder mempty
           LambdaLibRoute_UDTF -> PathSegment "udtf" $ unitEncoder mempty
-
+      FrontendRoute_FileStorage -> PathSegment "fileStorage" $
+        pathComponentEncoder $ \case
+          FileStorageRoute_MinIO -> PathSegment "minio" $ unitEncoder mempty
+          FileStorageRoute_HDFS -> PathSegment "hdfs" $ unitEncoder mempty
+          FileStorageRoute_SFtp -> PathSegment "sftp" $ unitEncoder mempty
 concat <$> mapM deriveRouteComponent
   [ ''BackendRoute
   , ''APIRoute
@@ -147,4 +157,5 @@ concat <$> mapM deriveRouteComponent
   , ''DataSourceRoute
   , ''StateContainerRoute
   , ''LambdaLibRoute
+  , ''FileStorageRoute
   ]
