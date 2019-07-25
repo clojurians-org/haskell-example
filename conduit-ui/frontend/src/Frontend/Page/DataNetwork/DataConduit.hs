@@ -46,8 +46,8 @@ theadUI = do
     elClass "th" "" $ text "类型"
     elClass "th" "" $ text "名称"
     elClass "th" "" $ text "描述"
+    elClass "th" "" $ text "状态容器"        
     elClass "th" "" $ text "数据源"
-    elClass "th" "" $ text "状态容器"    
     elClass "th" "" $ text "数据服务"
 
 tbodyUI
@@ -93,8 +93,8 @@ dataNetwork_dataConduit
   => (Event t WSResponseMessage)
   -> m (Event t [WSRequestMessage])
 dataNetwork_dataConduit wsEvt = do
-  divClass "ui segment basic" $ do
-    divClass "ui message compact" $ do
+  divClass "ui segment basic" $
+    divClass "ui grid" $ divClass "four wide column" $ divClass "ui message" $ do
       elClass "h2" "ui header" $ do
         text "数据导管"
       elClass "ul" "list" $ do
@@ -108,57 +108,123 @@ dataNetwork_dataConduit wsEvt = do
       tfootUI
 
   divClass "ui segment basic" $ do
+    {--
     divClass "ui grid"  $ divClass "twelve wide column" $ do
       elClass "h4" "ui horizontal divider header" $ do
         text "数据导管详情"
-    divClass "ui grid" $ divClass "eight wide column" $ do
-      divClass "ui list" $ do
-        divClass "ui item" $ do
-          elClass "i" "angle double down icon" blank
-          divClass "content" $ do
-            divClass "header" $ text "DataSource"
-            divClass "description" $ text "数据源"
---            divClass "ui item" $ do
---              divClass "i
-        divClass "ui item" $ do
-          elClass "i" "angle double down icon" blank
-          divClass "content" $ do
-            divClass "header" $ text "DataPipe"
-            divClass "description" $ text "数据管道"
-        divClass "ui item" $ do
-          elClass "i" "angle double down icon" blank
-          divClass "content" $ do
-            divClass "header" $ text "DataService"
-            divClass "description" $ text "数据服务 "
-        
-    divClass "ui grid" $ divClass "ten wide column" $ do        
-        divClass "ui top attached warning segment" $ do
-          divClass "ui grid" $ do
-            divClass "four wide column" $ do
-              divClass "ui toggle checkbox" $ do
-                checkbox True def
-                el "label" $ text "Conduit"
-            divClass "four wide column" $ do
-              divClass "ui toggle checkbox" $ do
-                checkbox False def
-                el "label" $ text "SQL"
-        divClass "ui attached segment" $ do
-          divClass "ui segment basic" $ divClass "ui list" $ do
-            divClass "item" $ do
-              divClass "ui form" $ do
-                divClass "field" $ do
-                  el "label" $ text "Conduit表达式"
-                  textAreaElement $ def & initialAttributes .~ ("rows" =: "5")
-                                  & textAreaElementConfig_initialValue .~ "max <$> C.max #a <*> C.max #b <*> C.max #c"
-            
-            divClass "item" $ do
-              divClass "ui form" $ do
-                divClass "field" $ do
-                  el "label" $ text "SQL表达式-3"
-                  textAreaElement $ def & initialAttributes .~ ("rows" =: "5")
-                                  & textAreaElementConfig_initialValue .~ (cs . unlines)
-                                      [  "SELECT t1.* FROM ("
-                                       , "  SELECT t0.*, {concate ',' #groupFields}, row_number() OVER PARTITION BY (#groupFields)"
-                                       , "  FROM #inData t0"
-                                       , ") t1 where rn = 1" ]
+    --}
+    divClass "" $ do
+      divClass "ui top attached warning segment" $ do
+        divClass "ui horizontal divided list" $ do
+          divClass "item" $ do
+            elClass "i" "angle double down icon" blank
+            divClass "content" $ divClass "header" $ text "成功继续下一步"
+          divClass "item" $ do
+            elClass "i" "arrows alternate vertical icon" blank
+            divClass "content" $ divClass "header" $ text "失败尝试下一步"       
+          divClass "item" $ do
+            elClass "i" "code icon" blank
+            divClass "content" $ divClass "header" $ text "独立并行逻辑"
+      divClass "ui attached segment" $ divClass "ui grid" $ divClass "eight wide column" $ do
+        divClass "ui list" $ do
+          divClass "ui item" $ do
+            elClass "i" "paperclip icon" blank
+            divClass "content" $ do
+              divClass "header" $ text "StateT-状态容器"
+              divClass "list" $ do
+                divClass "item" $ do
+                  elClass "i" "code icon" blank
+                  divClass "content" $ divClass "header" $ text "PostgreSQL"
+                
+          divClass "ui item" $ do
+            elClass "i" "database icon" blank
+            divClass "content" $ do
+              divClass "header" $ text "ReaderT-数据源"
+              divClass "list" $ do
+                divClass "item" $ do
+                  elClass "i" "folder icon" blank
+                  divClass "content" $ divClass "header" $ text "RestAPI"
+                  divClass "list" $ do
+                    divClass "item" $ do
+                      elClass "i" "code icon" blank
+                      divClass "content" $ divClass "header" $ text "BaiRongCreditReport"
+      
+          divClass "ui item" $ do
+            elClass "i" "eye icon" blank
+            divClass "content" $ do
+              divClass "header" $ text "WriterT-数据服务"
+              divClass "list" $ do
+                divClass "item" $ do
+                  elClass "i" "folder icon" blank
+                  divClass "content" $ divClass "header" $ text "NotifyService"
+                  divClass "list" $ do
+                    divClass "item" $ do
+                      elClass "i" "code icon" blank
+                      divClass "content" $ divClass "header" $ text "WebHook"                  
+      
+          divClass "ui item" $ do
+            elClass "i" "handshake icon" blank
+            divClass "content" $ do
+              divClass "header" $ text "DataConduit-数据导管"
+              divClass "list" $ do
+                divClass "item" $ do
+                  elClass "i" "angle double down icon" blank
+                  divClass "content" $ divClass "header" $ text "EventRequest-接受事件源请求"
+                divClass "item" $ do
+                  elClass "i" "angle double down icon" blank
+                  divClass "content" $
+                    divClass "list" $ do
+                    divClass "item" $ do
+                      elClass "i" "arrows alternate vertical icon" blank
+                      divClass "content" $ divClass "header" $ text "StateT.get-读取状态容器"
+                    divClass "item" $ do
+                      elClass "i" "arrows alternate vertical icon" blank
+                      divClass "content" $ divClass "list" $ do
+                        divClass "item" $ do
+                          elClass "i" "angle double down icon" blank
+                          divClass "content" $ divClass "header" $ text "ReaderT.ask-读取数据源"
+                        divClass "item" $ do
+                          elClass "i" "angle double down icon" blank
+                          divClass "content" $ divClass "header" $ text "StateT.modify-修改状态容器"                        
+                divClass "item" $ do
+                  elClass "i" "angle double down icon" blank
+                  divClass "content" $ divClass "header" $ text "解析数据源"
+                divClass "item" $ do
+                  elClass "i" "angle double down icon" blank
+                  divClass "content" $ divClass "header" $ text "WriterT.tell-写入数据服务"
+                divClass "item" $ do
+                  elClass "i" "angle double down icon" blank
+                  divClass "content" $ divClass "header" $ text "EventResponse-返回事件源响应"
+    divClass "ui hidden divider" blank             
+    divClass "" $ do
+      divClass "ui top attached warning segment" $ do
+        divClass "ui horizontal divided list" $ do
+          divClass "item" $ do
+            divClass "ui toggle read-only checkbox" $ do
+              checkbox True def 
+              el "label" $ divClass "header" $ text "Conduit"
+          divClass "item" $ do
+            divClass "ui toggle read-only checkbox" $ do
+              checkbox False def
+              el "label" $ divClass "header" $ text "SQL"
+
+      divClass "ui attached segment" $ do
+        divClass "ui segment basic" $ divClass "ui list" $ do
+          divClass "item" $ do
+            divClass "ui form" $ do
+              divClass "field" $ do
+                el "label" $ text "Conduit表达式"
+                textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
+                                & textAreaElementConfig_initialValue .~ "max <$> C.max #a <*> C.max #b <*> C.max #c"
+          
+          divClass "item" $ do
+            divClass "ui form" $ do
+              divClass "field" $ do
+                el "label" $ text "SQL表达式"
+                textAreaElement $ def & initialAttributes .~ ("rows" =: "10")
+                                & textAreaElementConfig_initialValue .~ (cs . unlines)
+                                    [  "SELECT t1.* FROM ("
+                                     , "  SELECT t0.*, {concate ',' #groupFields}, row_number() OVER PARTITION BY (#groupFields)"
+                                     , "  FROM #inData t0"
+                                     , ") t1 where rn = 1" ]
   return never

@@ -92,7 +92,7 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时查询接口"
+    elClass "h4" "ui header" $ text "查询服务"
     divClass "menu" $ do
       divClass "item" $ text "PostgREST"
       divClass "item" $ text "ElasticSearch"
@@ -100,27 +100,27 @@ nav = do
       divClass "item" $ text "Kudu"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "文件存储接口"
+    elClass "h4" "ui header" $ text "文件服务"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_MinIO :/ ()) $ text "Minio"
-      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_HDFS :/ ()) $ text "HDFS"
-      divClass "item" $ routeLink (FrontendRoute_FileStorage :/ FileStorageRoute_SFtp :/ ()) $ text "Ftp/SFtp"
+      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_MinIO :/ ()) $ text "Minio"
+      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_HDFS :/ ()) $ text "HDFS"
+      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_SFtp :/ ()) $ text "Ftp/SFtp"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时通知接口"
+    elClass "h4" "ui header" $ text "通知服务"
     divClass "menu" $ do
       divClass "item" $ text "WebHook"
       divClass "item" $ text "Email"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时BI报表"
+    elClass "h4" "ui header" $ text "报表服务"
     divClass "menu" $ do
       divClass "item" $ text "公共报表"
       divClass "item" $ text "个人报表"
       divClass "item" $ text "报表开发器"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "实时ETL引擎"
+    elClass "h4" "ui header" $ text "ETL引擎"
     divClass "menu" $ do
       divClass "item" $ text "Lambda组件库"      
       divClass "item" $ text "Conduit"
@@ -168,10 +168,10 @@ page wsST wsResponseEvt = do
         StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
         StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
         StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
-      FrontendRoute_FileStorage -> fmap switchDyn $ subRoute $ \case
-        FileStorageRoute_MinIO -> text "my FileStorageRoute_MinIO" >> return never
-        FileStorageRoute_HDFS -> text "my FileStorageRoute_HDFS" >> return never
-        FileStorageRoute_SFtp -> text "my FileStorageRoute_SFtp" >> return never
+      FrontendRoute_FileService -> fmap switchDyn $ subRoute $ \case
+        FileServiceRoute_MinIO -> text "my FileServiceRoute_MinIO" >> return never
+        FileServiceRoute_HDFS -> text "my FileServiceRoute_HDFS" >> return never
+        FileServiceRoute_SFtp -> text "my FileServiceRoute_SFtp" >> return never
 
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js m, MonadHold t m
