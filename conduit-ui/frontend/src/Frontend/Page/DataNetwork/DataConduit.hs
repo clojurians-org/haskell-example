@@ -94,7 +94,7 @@ dataNetwork_dataConduit
   -> m (Event t [WSRequestMessage])
 dataNetwork_dataConduit wsEvt = do
   divClass "ui segment basic" $
-    divClass "ui grid" $ divClass "four wide column" $ divClass "ui message" $ do
+    divClass "ui grid" $ divClass "eight wide column" $ divClass "ui message" $ do
       elClass "h2" "ui header" $ do
         text "数据导管"
       elClass "ul" "list" $ do

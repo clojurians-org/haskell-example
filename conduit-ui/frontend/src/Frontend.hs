@@ -15,6 +15,7 @@ import Common.WebSocketMessage
 import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
+import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
 import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
 import Frontend.Page.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
@@ -82,7 +83,7 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_RestAPI :/ ()) $ text "RestAPI"
       divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQLCursor :/ ()) $ text "SQL游标"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Minio :/ ()) $ text "Minio"
+      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_MinIO :/ ()) $ text "MinIO"
       
   divClass "item" $ do
     elClass "h4" "ui header" $ text "状态容器"
@@ -94,10 +95,10 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "查询服务"
     divClass "menu" $ do
-      divClass "item" $ text "PostgREST"
-      divClass "item" $ text "ElasticSearch"
-      divClass "item" $ text "Hbase"
-      divClass "item" $ text "Kudu"
+      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_PostgREST :/ ()) $ text "PostgREST"
+      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_ElasticSearch :/ ()) $ text "ElasticSearch"
+      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_HBase :/ ()) $ text "Hbase"
+      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_Kudu :/ ()) $ text "Kudu"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "文件服务"
@@ -143,6 +144,7 @@ page wsST wsResponseEvt = do
   dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
   dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsST wsResponseEvt
   dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsST wsResponseEvt
+  dataNetwork_dataCircuit_st <- dataNetwork_dataCircuit_handle wsST wsResponseEvt
   
   eventSource_cronTimer_st <- eventSource_cronTimer_handle wsST wsResponseEvt
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsST wsResponseEvt
@@ -153,7 +155,7 @@ page wsST wsResponseEvt = do
         DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun dataNetwork_oneClickRun_st
         DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
         DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
-        DataNetworkRoute_DataCircuit -> text " DataNetworkRoute_DataCircuit" >> return never        
+        DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit dataNetwork_dataCircuit_st
       FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
         EventSourceRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
@@ -163,11 +165,16 @@ page wsST wsResponseEvt = do
         DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
         DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
         DataSourceRoute_SQLCursor -> dataSource_sqlCursor dataSource_sqlCursor_st
-        DataSourceRoute_Minio -> text "my DataSourceRoute_Minio" >> return never        
+        DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO" >> return never        
       FrontendRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
         StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
         StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
         StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
+      FrontendRoute_QueryService -> fmap switchDyn $ subRoute $ \case
+        QueryServiceRoute_PostgREST -> text "my QueryServiceRoute_PostgREST" >> return never
+        QueryServiceRoute_ElasticSearch -> text "my QueryServiceRoute_ElasticSearch" >> return never
+        QueryServiceRoute_HBase -> text "my QueryServiceRoute_HBase" >> return never
+        QueryServiceRoute_Kudu -> text "my QueryServiceRoute_Kudu" >> return never                
       FrontendRoute_FileService -> fmap switchDyn $ subRoute $ \case
         FileServiceRoute_MinIO -> text "my FileServiceRoute_MinIO" >> return never
         FileServiceRoute_HDFS -> text "my FileServiceRoute_HDFS" >> return never

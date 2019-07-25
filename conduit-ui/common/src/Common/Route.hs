@@ -74,7 +74,7 @@ data DataSourceRoute :: * -> * where
   DataSourceRoute_WebSocket :: DataSourceRoute ()
   DataSourceRoute_RestAPI :: DataSourceRoute ()  
   DataSourceRoute_SQLCursor :: DataSourceRoute ()
-  DataSourceRoute_Minio :: DataSourceRoute ()
+  DataSourceRoute_MinIO :: DataSourceRoute ()
 deriving instance Show (DataSourceRoute a)
 
 data StateContainerRoute :: * -> * where
@@ -132,7 +132,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
           DataSourceRoute_WebSocket -> PathSegment "webSocket" $ unitEncoder mempty
           DataSourceRoute_RestAPI -> PathSegment "restApi" $ unitEncoder mempty          
           DataSourceRoute_SQLCursor -> PathSegment "sqlCursor" $ unitEncoder mempty
-          DataSourceRoute_Minio -> PathSegment "minio" $ unitEncoder mempty
+          DataSourceRoute_MinIO -> PathSegment "minIO" $ unitEncoder mempty
       FrontendRoute_StateContainer -> PathSegment "stateContainer" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case

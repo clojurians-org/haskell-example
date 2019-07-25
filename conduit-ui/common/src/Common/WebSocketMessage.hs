@@ -10,10 +10,32 @@ import GHC.Int (Int64)
 import GHC.Generics (Generic)
 import qualified Data.Aeson as J
 import qualified Data.Text as T
+import qualified Data.Tree as TR
 import Data.Default (Default(def))
 
 import Control.Applicative (liftA2)
 import Control.Lens ()
+
+instance Default T.Text where def = T.empty
+
+data DataConduit = DataConduit {
+  } deriving (Generic, Show)
+instance J.ToJSON DataConduit
+instance J.FromJSON DataConduit
+
+data DataCircuit = DataCircuit {
+    dataCircuit_name :: T.Text
+  , dataCircuit_desc :: T.Text
+  , dataCircuit_subDataCircuits :: [DataCircuit]
+  , dataCircuit_dataConduits :: [DataConduit]
+  , dataCircuit_partCombinator :: TR.Tree T.Text
+  , dataCircuit_configSchema :: T.Text
+  , dataCircuit_requestSchema :: T.Text
+  , dataCircuit_responseSchema :: T.Text
+  } deriving (Generic, Show)
+instance J.ToJSON DataCircuit
+instance J.FromJSON DataCircuit
+instance Default DataCircuit
 
 data CronTimer = CronTimer {
     ce_name :: T.Text
@@ -39,6 +61,7 @@ data SQLCursor = SQLCursor {
   } deriving (Generic, Show)
 instance J.ToJSON SQLCursor
 instance J.FromJSON SQLCursor
+
 
 data AppST = AppST {
     _appST_cronTimers :: [CronTimer]
