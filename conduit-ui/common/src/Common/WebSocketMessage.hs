@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Common.WebSocketMessage where
 
@@ -18,14 +19,12 @@ import Control.Lens ()
 
 instance Default T.Text where def = T.empty
 
-data DataConduit = DataConduit {
-  } deriving (Generic, Show)
-instance J.ToJSON DataConduit
-instance J.FromJSON DataConduit
-
 data DataCircuit = DataCircuit {
     dataCircuit_name :: T.Text
   , dataCircuit_desc :: T.Text
+  , dataCircuit_stateContainers :: [StateContainerHolder]
+  , dataCircuit_dataSources :: [DataSourceHolder]
+  , dataCircuit_dataServices :: [DataServiceHolder]
   , dataCircuit_subDataCircuits :: [DataCircuit]
   , dataCircuit_dataConduits :: [DataConduit]
   , dataCircuit_partCombinator :: TR.Tree T.Text
@@ -37,6 +36,75 @@ instance J.ToJSON DataCircuit
 instance J.FromJSON DataCircuit
 instance Default DataCircuit
 
+data StateContainerHolder = StateContainer_PostgreSQL
+                        | StateContainer_RocksDB
+                        | StateContainer_SQLLite
+  deriving (Generic, Show)                       
+instance J.ToJSON StateContainerHolder
+instance J.FromJSON StateContainerHolder
+
+data DataSourceHolder = DataSource_RestAPI
+                      | DataSource_SQLCursor
+                      | DataSource_MinIO
+  deriving (Generic, Show)
+instance J.ToJSON DataSourceHolder
+instance J.FromJSON DataSourceHolder
+
+data DataServiceHolder = DataService_QueryService_PostgREST
+                     | DataService_QueryService_ElasticSearch
+                     | DataService_QueryService_HBase
+                     | DataService_QueryService_Kudu
+                     | DataService_FileService_MinIO
+                     | DataService_FileService_HDFS
+                     | DataService_FileService_SFtp
+  deriving (Generic, Show)
+instance J.ToJSON DataServiceHolder
+instance J.FromJSON DataServiceHolder
+
+data SQLCursor = SQLCursor { sqlCursor_name :: T.Text
+                            , sqlCursor_type :: T.Text
+                            , sqlCursor_host :: T.Text
+                            , sqlCursor_database :: T.Text
+                            , sqlCursor_username :: T.Text
+                            , sqlCursor_password :: T.Text
+                            , sqlCursor_table :: T.Text
+                            , sqlCursor_fields :: [T.Text]
+                            , sqlCursor_xid :: Maybe Int64 }
+  deriving (Generic, Show)
+instance J.ToJSON SQLCursor
+instance J.FromJSON SQLCursor
+
+data RestAPI = RestAPI { restAPI_name :: T.Text
+                       , restAPI_host :: T.Text }
+  deriving (Generic, Show)
+instance J.ToJSON RestAPI
+instance J.FromJSON RestAPI
+
+data DataService = DServiceQueryService QueryService
+                 | DServiceFileService FileService
+                 | DServiceNotifyService NotifyService
+  deriving (Generic, Show)
+instance J.ToJSON DataService
+instance J.FromJSON DataService
+
+data QueryService = QueryService {}
+  deriving (Generic, Show)
+instance J.ToJSON QueryService
+instance J.FromJSON QueryService
+data FileService = FileService {}
+  deriving (Generic, Show)
+instance J.ToJSON FileService
+instance J.FromJSON FileService
+data NotifyService = NotifyService {}
+  deriving (Generic, Show)
+instance J.ToJSON NotifyService
+instance J.FromJSON NotifyService
+
+data DataConduit = DataConduit {
+  } deriving (Generic, Show)
+instance J.ToJSON DataConduit
+instance J.FromJSON DataConduit
+
 data CronTimer = CronTimer {
     ce_name :: T.Text
   , ce_expr :: T.Text
@@ -47,21 +115,6 @@ instance J.FromJSON CronTimer
 
 isSameCronXID :: CronTimer -> CronTimer -> Bool
 isSameCronXID (CronTimer _  _ id1) (CronTimer _  _ id2) = id1 == id2
-
-data SQLCursor = SQLCursor {
-    sc_name :: T.Text
-  , sc_type :: T.Text
-  , sc_host :: T.Text
-  , sc_database :: T.Text  
-  , sc_username :: T.Text
-  , sc_password :: T.Text
-  , sc_table :: T.Text
-  , sc_fields :: [T.Text]
-  , sc_xid :: Maybe Int64
-  } deriving (Generic, Show)
-instance J.ToJSON SQLCursor
-instance J.FromJSON SQLCursor
-
 
 data AppST = AppST {
     _appST_cronTimers :: [CronTimer]

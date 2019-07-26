@@ -13,6 +13,7 @@ module Frontend where
 
 import Common.WebSocketMessage
 import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
+import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
@@ -64,7 +65,8 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据网络"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_OneClickRun :/ ()) $ text "一键实时" 
+      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_OneClickRun :/ ()) $ text "一键实时"
+      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_EffectEngine :/ ()) $ text "实效引擎"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_LogicFragement :/ ()) $ text "逻辑碎片"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataConduit :/ ()) $ text "数据导管"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataCircuit :/ ()) $ text "数据电路"
@@ -120,15 +122,6 @@ nav = do
       divClass "item" $ text "个人报表"
       divClass "item" $ text "报表开发器"
 
-  divClass "item" $ do
-    elClass "h4" "ui header" $ text "ETL引擎"
-    divClass "menu" $ do
-      divClass "item" $ text "Lambda组件库"      
-      divClass "item" $ text "Conduit"
-      divClass "item" $ text "SQL"
-      divClass "item" $ text "规则引擎"
-      
-
 page :: forall t js m r.
   ( DomBuilder t m, Prerender js m
   , MonadFix m, MonadHold t m
@@ -142,6 +135,7 @@ page :: forall t js m r.
 page wsST wsResponseEvt = do
   let wsSTNotUsed = undefined  
   dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
+  dataNetwork_effectEngine_st <- dataNetwork_effectEngine_handle wsST wsResponseEvt
   dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsST wsResponseEvt
   dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsST wsResponseEvt
   dataNetwork_dataCircuit_st <- dataNetwork_dataCircuit_handle wsST wsResponseEvt
@@ -153,6 +147,7 @@ page wsST wsResponseEvt = do
       FrontendRoute_Main -> text "my main" >> return never
       FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
         DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun dataNetwork_oneClickRun_st
+        DataNetworkRoute_EffectEngine -> dataNetwork_effectEngine dataNetwork_effectEngine_st
         DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
         DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
         DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit dataNetwork_dataCircuit_st

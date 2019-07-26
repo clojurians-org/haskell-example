@@ -58,6 +58,7 @@ deriving instance Show (FrontendRoute a)
 
 data DataNetworkRoute :: * -> * where
   DataNetworkRoute_OneClickRun :: DataNetworkRoute ()
+  DataNetworkRoute_EffectEngine :: DataNetworkRoute ()
   DataNetworkRoute_LogicFragement :: DataNetworkRoute ()
   DataNetworkRoute_DataConduit :: DataNetworkRoute ()
   DataNetworkRoute_DataCircuit :: DataNetworkRoute ()
@@ -116,6 +117,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       FrontendRoute_DataNetwork -> PathSegment "dataNetwork" $
         pathComponentEncoder $ \case
           DataNetworkRoute_OneClickRun -> PathSegment "oneClickRun" $ unitEncoder mempty
+          DataNetworkRoute_EffectEngine -> PathSegment "effectEngine" $ unitEncoder mempty
           DataNetworkRoute_LogicFragement -> PathSegment "logicFragement" $ unitEncoder mempty
           DataNetworkRoute_DataConduit -> PathSegment "dataConduit" $ unitEncoder mempty
           DataNetworkRoute_DataCircuit -> PathSegment "dataCircuit" $ unitEncoder mempty

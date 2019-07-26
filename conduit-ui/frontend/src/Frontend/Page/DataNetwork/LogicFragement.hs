@@ -97,13 +97,16 @@ dataNetwork_logicFragement
   => (Event t WSResponseMessage)
   -> m (Event t [WSRequestMessage])
 dataNetwork_logicFragement wsEvt = do
-  divClass "ui segment basic" $ do
-    divClass "ui message compact" $ do
+  divClass "ui segment basic" $
+    divClass "ui grid" $ divClass "eight wide column" $ divClass "ui message" $ do
       elClass "h2" "ui header" $ do
         text "逻辑碎片"
+        
       elClass "ul" "list" $ do
         el "li" $ elClass "h4" "ui header" $ text "可复用的代码逻辑"
-        el "li" $ elClass "h4" "ui header" $ text "支持多种ETL引擎"
+        el "li" $ elClass "h4" "ui header" $ text "可包含同类型子逻辑碎片"
+        el "li" $ elClass "h4" "ui header" $ text "运行在实效引擎上"
+        el "li" $ elClass "h4" "ui header" $ text "可使用实效引擎函数组件库"
   
   divClass "ui segment basic" $ do
     elClass "table" "ui table collapsing" $ do

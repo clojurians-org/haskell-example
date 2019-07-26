@@ -70,20 +70,17 @@ dataNetwork_oneClickRun
   => Event t T.Text
   -> m (Event t [WSRequestMessage])
 dataNetwork_oneClickRun wsEvt = do
-  divClass "ui segment basic" $ do
-    divClass "ui message compact" $ do
+  divClass "ui segment basic" $
+    divClass "ui grid" $ divClass "eight wide column" $ divClass "ui message" $ do
       elClass "h2" "ui header" $ do
         text "一键实时"
+
       elClass "ul" "list" $ do
-        el "li" $ do
-          elClass "h4" "ui header" $ text "点击实时运行"
-          elClass "a" "ui brown label" $ text "数据碎片"
-          elClass "a" "ui brown label" $ text "数据导管"
-          elClass "a" "ui brown label" $ text "数据电路"
-        el "li" $ do
-          elClass "h4" "ui header" $ text "事件源调度"
-          elClass "a" "ui brown label" $ text "数据导管"
-          elClass "a" "ui brown label" $ text "数据电路"
+        el "li" $ elClass "h4" "ui header" $ text "实例化数据电路组件"
+        el "li" $ elClass "h4" "ui header" $ text "实例化实效引擎环境"
+        el "li" $ elClass "h4" "ui header" $ text "一键激活逻辑电路"
+        el "li" $ elClass "h4" "ui header" $ text ">_ 点击运行"
+        el "li" $ elClass "h4" "ui header" $ text ">_ 事件源调度"
   
   divClass "ui segment basic" $
     divClass "ui form" $ do

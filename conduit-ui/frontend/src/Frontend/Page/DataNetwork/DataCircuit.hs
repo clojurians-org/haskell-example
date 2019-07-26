@@ -24,30 +24,39 @@ import qualified Data.Tree as TR
 
 exampleDataCircuits :: [DataCircuit]
 exampleDataCircuits =
-  [ def { dataCircuit_name = "fileLoadPlatform"
+  [ def { dataCircuit_name = "dataCircuitREPL"
+        , dataCircuit_desc = "数据电路REPL"}
+  , def { dataCircuit_name = "fileLoadPlatform"
         , dataCircuit_desc = "文件加载平台" }
   , def { dataCircuit_name = "dwSchedulePlatform"
         , dataCircuit_desc = "数仓调度平台" }
   , def { dataCircuit_name = "filePushPlatform"
-        , dataCircuit_desc = "文件下传平台" }
+        , dataCircuit_desc = "文件下传平台"
+        , dataCircuit_dataSources = [ DataSource_SQLCursor ]
+        , dataCircuit_dataServices = [ DataService_FileService_MinIO ] }
   , def { dataCircuit_name = "dataQueryPlatform"
-        , dataCircuit_desc = "数据查询平台" }
+        , dataCircuit_desc = "数据查询平台"
+        , dataCircuit_dataSources = [ DataSource_SQLCursor ] }
   , def { dataCircuit_name = "externalDataPlatform"
-        , dataCircuit_desc = "外部数据平台" }
+        , dataCircuit_desc = "外部数据平台"
+        , dataCircuit_stateContainers = [ StateContainer_PostgreSQL ]
+        , dataCircuit_dataSources = [ DataSource_SQLCursor ] }
   , def { dataCircuit_name = "logPullPlatform"
         , dataCircuit_desc = "日志抽取平台" }
   , def { dataCircuit_name = "streamingPlatform"
         , dataCircuit_desc = "流式计算平台" }
-  , def { dataCircuit_name = "dataMonitorPlatform"
-        , dataCircuit_desc = "数据监控平台" }
+  , def { dataCircuit_name = "realtimeAlertPlatform"
+        , dataCircuit_desc = "实时预警平台" }
+  , def { dataCircuit_name = "machineLearningPlatform"
+        , dataCircuit_desc = "机器学习平台" }    
     ]
 dataNetwork_dataCircuit_handle
   :: forall t m r.
      ( MonadHold t m, MonadFix m
      , MonadIO m, MonadIO (Performable m), PerformEvent t m)
-  => MVar r -> Event t WSResponseMessage -> m (Event t [DataCircuit])
+  => MVar r -> Event t WSResponseMessage -> m (Event t WSResponseMessage, Dynamic t [DataCircuit])
 dataNetwork_dataCircuit_handle _ wsResponseEvt = do
-  return (const [] <$> wsResponseEvt)
+  return (wsResponseEvt, constDyn exampleDataCircuits)
 
 theadUI
   :: forall t m .
@@ -58,8 +67,11 @@ theadUI = do
     elClass "th" "" $ checkbox False def
     elClass "th" "" $ text "名称"
     elClass "th" "" $ text "描述"
-    elClass "th" "" $ text "子数据电路"    
-    elClass "th" "" $ text "数据导管"
+    elClass "th" "" $ text "状态容器"
+    elClass "th" "" $ text "数据源"
+    elClass "th" "" $ text "数据服务"       
+--    elClass "th" "" $ text "子数据电路"
+--    elClass "th" "" $ text "数据导管"
 --    elClass "th" "" $ text "部件组合器"
 
     {--
@@ -80,18 +92,14 @@ tbodyUI = do
       el "td" $ divClass "ui mini input" $ inputElement def
       -- description
       el "td" $ divClass "ui mini input" $ inputElement def
+      -- stateContainer
       el "td" $ divClass "ui mini input" $ inputElement def
-      el "td" $ divClass "ui mini input" $ inputElement def      
-
+      -- dataSource
+      el "td" $ divClass "ui mini input" $ inputElement def
+      -- dataService
+      el "td" $ divClass "ui mini input" $ inputElement def
+    
   return ()
-
-tfootUI
-  :: forall t m .
-     (DomBuilder t m, PostBuild t m)
-   => m ()
-tfootUI = do
-  el "tfoot" $ do
-    blank
 
 dataNetwork_dataCircuit
   :: forall t m .
@@ -107,12 +115,11 @@ dataNetwork_dataCircuit wsEvt = do
         el "li" $ elClass "h4" "ui header" $ text "由数据导管连接而成"
         el "li" $ elClass "h4" "ui header" $ text "可包含子数据电路"
         el "li" $ elClass "h4" "ui header" $ text "按需构建业务系统"
-        
+        el "li" $ elClass "h4" "ui header" $ text "分布式调度"
 
   divClass "ui segment basic" $ do
     elClass "table" "ui table collapsing" $ do
       theadUI
-      tbodyUI
-      tfootUI
+      tbodyUI 
   
   return never

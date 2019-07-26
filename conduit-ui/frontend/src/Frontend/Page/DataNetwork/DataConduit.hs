@@ -98,7 +98,7 @@ dataNetwork_dataConduit wsEvt = do
       elClass "h2" "ui header" $ do
         text "数据导管"
       elClass "ul" "list" $ do
-        el "li" $ elClass "h4" "ui header" $ text "由逻辑碎片复合而成"
+        el "li" $ elClass "h4" "ui header" $ text "由逻辑碎片组合而成"
         el "li" $ elClass "h4" "ui header" $ text "可读取多个数据源"
         el "li" $ elClass "h4" "ui header" $ text "可推送多个数据服务"
   divClass "ui segment basic" $ do
