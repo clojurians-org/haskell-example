@@ -89,6 +89,7 @@ dataNetwork_effectEngine wsEvt = do
         el "li" $ elClass "h4" "ui header" $ text "可定制实现新实效引擎"        
         el "li" $ elClass "h4" "ui header" $ text ">_ Conduit"
         el "li" $ elClass "h4" "ui header" $ text ">_ PostgresSQL"
+        el "li" $ elClass "h4" "ui header" $ text ">_ SparkSQL"        
         el "li" $ elClass "h4" "ui header" $ text ">_ KafkaSQL"
         el "li" $ elClass "h4" "ui header" $ text ">_ FlinkSQL"
         el "li" $ elClass "h4" "ui header" $ text ">_ Java"
