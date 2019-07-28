@@ -17,6 +17,7 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
+instance Default Bool where def = True
 instance Default T.Text where def = T.empty
 class ToHaskellCode a where
   toHaskellCode :: a -> (T.Text, T.Text)

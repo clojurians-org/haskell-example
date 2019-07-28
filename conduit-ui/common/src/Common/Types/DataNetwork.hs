@@ -23,17 +23,23 @@ data EventPulse = EventPulse {
     eventPulse_enable :: Bool
   , eventPulse_name :: T.Text
   , eventPulse_desc :: T.Text
-  , eventPulse_dataConduits :: [DataCircuitValue]
-  }
-type DataCircuitId = Int64
+  , eventPulse_dataConduitValues :: [DataCircuitValue]
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON EventPulse
+instance J.FromJSON EventPulse
+instance Default EventPulse
+
 data DataCircuitValue = DataCircuitValue {
     dataCircuitValue_enable :: Bool
   , dataCircuitValue_name :: T.Text
   , dataCircuitValue_desc :: T.Text
-  , dataCircuitValue_base :: DataCircuitId
-  , dataCircuitValue_stateContainers :: [StateContainer]    
-  , dataCircuitValue_dataSources :: [DataSource]
-  }
+  , dataCircuitValue_linkedDataSandbox :: LinkedDataSandbox  
+  , dataCircuitValue_linkedDataConduit :: (Int64, T.Text)
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON DataCircuitValue
+instance J.FromJSON DataCircuitValue
+instance Default DataCircuitValue
+
 data DataCircuit = DataCircuit {
     dataCircuit_name :: T.Text
   , dataCircuit_desc :: T.Text
@@ -54,14 +60,13 @@ instance Default DataCircuit
 instance ToHaskellCode DataCircuit where
   toHaskellCode dataCircuit = toHaskellCode (dataCircuit_partCombinator dataCircuit)
 
-
 data DataCircuitPart = DataCircuitPart_RootBindNode
                      | DataCircuitPart_RootAlternativeNode
                      | DataCircuitPart_BindNode T.Text
                      | DataCircuitPart_AlternateNode T.Text
                      | DataCircuitPart_ParallelNode T.Text
-                     | DataCircuitPart_LinkedDataCircuit Int64
-                     | DataCircuitPart_LinkedDataConduit Int64               
+                     | DataCircuitPart_LinkedDataCircuit (Int64, T.Text)
+                     | DataCircuitPart_LinkedDataConduit (Int64, T.Text)
                      | DataCircuitPart_EmbededDataCircuit DataCircuit
                      | DataCircuitPart_EmbededDataConduit DataConduit
   deriving (Generic, Show, Eq)
@@ -79,7 +84,7 @@ data DataConduit = DataConduit {
   , dataConduit_stateContainers :: [StateContainerHolder]
   , dataConduit_dataSources :: [DataSourceHolder]
   , dataConduit_dataServices :: [DataServiceHolder]
-  , dataConduit_logicFagements :: [LogicFragment ]
+  , dataConduit_logicFagements :: [ LogicFragment ]
   , dataConduit_partCombinator :: TR.Tree DataConduitPart
   , dataConduit_xid :: Maybe Int64
   } deriving (Generic, Show, Eq)
@@ -92,7 +97,7 @@ data DataConduitPart = DataConduitPart_RootBindNode
                      | DataConduitPart_BindNode T.Text
                      | DataConduitPart_AlternateNode T.Text
                      | DataConduitPart_ParallelNode T.Text
-                     | DataConduitPart_LinkedLogicFragment Int64
+                     | DataConduitPart_LinkedLogicFragment (Int64, T.Text)
                      | DataConduitPart_EmbededLogicFragment LogicFragment
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataConduitPart
@@ -121,11 +126,9 @@ data LogicFragmentPart = LogicFragmentPart_RootBindNode
                        | LogicFragmentPart_BindNode T.Text
                        | LogicFragmentPart_AlternateNode T.Text
                        | LogicFragmentPart_ParallelNode T.Text
-                       | LogicFragmentPart_LinkedLogicFragment Int64   
+                       | LogicFragmentPart_LinkedLogicFragment (Int64, T.Text)
                        | LogicFragmentPart_EmbededLogicFragment LogicFragment
   deriving (Generic, Show, Eq)
 instance J.ToJSON LogicFragmentPart
 instance J.FromJSON LogicFragmentPart
 instance Default LogicFragmentPart where def = LogicFragmentPart_RootBindNode
-
-

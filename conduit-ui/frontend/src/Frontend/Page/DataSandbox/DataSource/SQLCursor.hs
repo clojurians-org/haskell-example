@@ -6,7 +6,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Frontend.Page.DataSource.SQLCursor
+module Frontend.Page.DataSandbox.DataSource.SQLCursor
   (dataSource_sqlCursor_handle, dataSource_sqlCursor) where
 
 import Common.WebSocketMessage

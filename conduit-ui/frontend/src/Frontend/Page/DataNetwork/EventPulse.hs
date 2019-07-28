@@ -16,7 +16,9 @@ import Reflex.Dom.Core
 import Control.Monad (forM_, void)
 import Control.Monad.Fix (MonadFix)
 
+import Data.Functor ((<&>))
 import qualified Data.Text as T
+import qualified Data.Map as M
 import Data.String.Conversions (cs)
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -57,14 +59,25 @@ exampleCode = unlines [
         ]
 
 
+exampleDataConduitValues :: [DataCircuitValue]
+exampleDataConduitValues = do
+  [ def { dataCircuitValue_name = "华瑞银行数据下传平台"
+        , dataCircuitValue_desc = "运行SQL推送文件至下游系统" }
+    ]
+exampleEventPulses :: [EventPulse]
+exampleEventPulses = do
+  [ def { eventPulse_name = "数据库扫描事件源"
+        , eventPulse_desc = "通过定时扫描调度系统作业日志进行触发"
+        , eventPulse_dataConduitValues = [] }
+    ]
 dataNetwork_eventPulse_handle
   :: forall t m r.
      ( MonadHold t m, MonadFix m
      , MonadIO m, MonadIO (Performable m), PerformEvent t m)
   => MVar r -> Event t WSResponseMessage
-  -> m (Event t WSResponseMessage, Dynamic t [DataCircuit])
+  -> m (Event t WSResponseMessage, Dynamic t [EventPulse])
 dataNetwork_eventPulse_handle _ wsResponseEvt = do
-  return (wsResponseEvt, constDyn [])
+  return (wsResponseEvt, constDyn exampleEventPulses)
 
 theadUI
   :: forall t m .
@@ -81,7 +94,7 @@ theadUI = do
 tbodyUI
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-   => Dynamic t [DataCircuit] -> m ()
+   => Dynamic t [EventPulse] -> m ()
 tbodyUI wsDyn = do
   el "tbody" $ do
     elClass "tr" "" $ do
@@ -95,12 +108,33 @@ tbodyUI wsDyn = do
       el "td" $ divClass "ui input" $ inputElement def
       -- stateContainer
       el "td" $ divClass "ui input" $ inputElement def
-
+    simpleList wsDyn $ \pulseDyn -> do
+      pb <- getPostBuild
+      elDynAttr "tr" (constDyn M.empty) $ do
+        deleteSelect <- el "td" $ divClass "ui fitted checkbox fields" $ do
+          checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
+          el "label" $ blank
+        el "th"  $ divClass "ui fitted toggle checkbox" $ do
+          checkbox False (def & checkboxConfig_setValue .~ (tagPromptlyDyn (eventPulse_enable <$> pulseDyn) pb))
+          el "label" blank
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated pulseDyn <&> eventPulse_name
+            , tag (current pulseDyn <&> eventPulse_name) pb ]
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated pulseDyn <&> eventPulse_desc
+            , tag (current pulseDyn <&> eventPulse_desc) pb ]
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated pulseDyn <&> (cs . show . eventPulse_dataConduitValues)
+            , tag (current pulseDyn <&> (cs . show . eventPulse_dataConduitValues)) pb ]
+      
   return ()
       -- dataService
 
 {--      
-      el "td" $ divClass "ui input" $ inputElement def
+   el "td" $ divClass "ui input" $ inputElement def
     simpleList wsDyn $ \conduitDyn -> do
       pb <- getPostBuild
       elDynAttr "tr" (constDyn M.empty) $ do
@@ -113,10 +147,49 @@ tbodyUI wsDyn = do
             , tag (current conduitDyn <&> dataCircuit_name) pb ]
 --}
 
+theadSecondUI
+  :: forall t m .
+     (DomBuilder t m, PostBuild t m)
+  => m ()
+theadSecondUI = do
+  el "thead" $ el "tr" $ do
+    el "th"  $ divClass "ui fitted checkbox fields" $ checkbox False def >> el "label" blank
+    el "th"  $ text "启用"
+    el "th"  $ text "名称"
+    el "th"  $ text "描述"
+    el "th"  $ text "数据电路"
+
+tbodySecondUI
+  :: forall t m .
+     (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
+   => Dynamic t [EventPulse] -> m ()
+tbodySecondUI wsDyn = do
+  el "tbody" $ do
+    elClass "tr" "" $ do
+      el "td" $ elClass' "button" "ui circular icon button teal"  $ elClass "i" "plus icon" blank
+      el "td" $ divClass "ui fitted toggle checkbox" $ do
+        checkbox True (def & checkboxConfig_setValue .~ (False <$ never))
+        el "label" blank
+      el "td" $ divClass "ui input" $ inputElement def
+      el "td" $ divClass "ui input" $ inputElement def
+      el "td" $ divClass "ui input" $ inputElement def
+
+  el "tbody" $ do
+    simpleList wsDyn $ \pulseDyn -> do
+      pb <- getPostBuild
+      elDynAttr "tr" (constDyn M.empty) $ do
+        deleteSelect <- el "td" $ divClass "ui fitted checkbox fields" $ do
+          checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
+          el "label" $ blank
+        el "th"  $ divClass "ui fitted toggle checkbox" $ do
+          checkbox False (def & checkboxConfig_setValue .~ (tagPromptlyDyn (eventPulse_enable <$> pulseDyn) pb))
+          el "label" blank
+  return ()        
+
 dataNetwork_eventPulse
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => (Event t WSResponseMessage, Dynamic t [DataCircuit])
+  => (Event t WSResponseMessage, Dynamic t [EventPulse])
   -> m (Event t [WSRequestMessage])
 dataNetwork_eventPulse (wsEvt, wsDyn) = do
   divClass "ui segment basic" $
@@ -128,9 +201,14 @@ dataNetwork_eventPulse (wsEvt, wsDyn) = do
 
   divClass "ui segment basic" $ do
     elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI wsDyn
+    divClass "ui hidden divider" blank
+    elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI wsDyn
+    
   return never
 
-{--  
+
+
+{--
   divClass "ui segment basic" $
     divClass "ui form" $ do
       myInput <- divClass "ui field" $ do

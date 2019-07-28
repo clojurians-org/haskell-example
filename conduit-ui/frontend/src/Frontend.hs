@@ -18,7 +18,7 @@ import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_hand
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
 import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
-import Frontend.Page.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
+import Frontend.Page.DataSandbox.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
 import Prelude
 

@@ -19,6 +19,15 @@ import Control.Applicative (liftA2)
 import Control.Lens ()
 
 
+data LinkedDataSandbox = LinkedDataSandbox {
+    linkedDataSandbox_stateContainers :: [(Int64, T.Text)]
+  , linkedDataSandbox_dataSources :: [(Int64, T.Text)]
+  , linkedDataSandbox_dataServices :: [(Int64, T.Text)]
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON LinkedDataSandbox
+instance J.FromJSON LinkedDataSandbox
+instance Default LinkedDataSandbox
+
 data DataSandbox = DataSandbox {
     dataSandbox_stateContainers :: [StateContainer]
   , dataSandbox_dataSources :: [DataSource]
