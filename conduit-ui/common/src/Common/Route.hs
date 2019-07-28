@@ -47,17 +47,11 @@ data FrontendRoute :: * -> * where
   FrontendRoute_DataNetwork :: FrontendRoute (R DataNetworkRoute)
 --  FrontendRoute_EventSource :: FrontendRoute (Maybe (R EventSourceRoute))
   FrontendRoute_EventSource :: FrontendRoute (R EventSourceRoute)
---  FrontendRoute_DataSource :: FrontendRoute (Maybe (R DataSourceRoute))
-  FrontendRoute_DataSource :: FrontendRoute (R DataSourceRoute)
---  FrontendRoute_StateContainer :: FrontendRoute (Maybe (R StateContainerRoute))
-  FrontendRoute_StateContainer :: FrontendRoute (R StateContainerRoute)
-  FrontendRoute_QueryService :: FrontendRoute (R QueryServiceRoute)  
-  FrontendRoute_FileService :: FrontendRoute (R FileServiceRoute)
-  FrontendRoute_NotifyService :: FrontendRoute (R NotifyServiceRoute)
+  FrontendRoute_DataSandbox :: FrontendRoute (R DataSandboxRoute)
 deriving instance Show (FrontendRoute a)
 
 data DataNetworkRoute :: * -> * where
-  DataNetworkRoute_OneClickRun :: DataNetworkRoute ()
+  DataNetworkRoute_EventPulse :: DataNetworkRoute ()
   DataNetworkRoute_EffectEngine :: DataNetworkRoute ()
   DataNetworkRoute_LogicFragement :: DataNetworkRoute ()
   DataNetworkRoute_DataConduit :: DataNetworkRoute ()
@@ -70,6 +64,18 @@ data EventSourceRoute :: * -> * where
   EventSourceRoute_FileWatcher :: EventSourceRoute ()
 deriving instance Show (EventSourceRoute a)
 
+data DataSandboxRoute :: * -> * where
+  DataSandboxRoute_DataSource :: DataSandboxRoute (R DataSourceRoute)
+  DataSandboxRoute_StateContainer :: DataSandboxRoute (R StateContainerRoute)
+  DataSandboxRoute_DataService :: DataSandboxRoute (R DataServiceRoute)
+deriving instance Show (DataSandboxRoute a)
+
+data StateContainerRoute :: * -> * where
+  StateContainerRoute_PostgreSQL :: StateContainerRoute ()  
+  StateContainerRoute_RocksDB :: StateContainerRoute ()
+  StateContainerRoute_SQLLite :: StateContainerRoute ()
+deriving instance Show (StateContainerRoute a)
+
 data DataSourceRoute :: * -> * where
   DataSourceRoute_Kafka :: DataSourceRoute ()
   DataSourceRoute_WebSocket :: DataSourceRoute ()
@@ -78,28 +84,18 @@ data DataSourceRoute :: * -> * where
   DataSourceRoute_MinIO :: DataSourceRoute ()
 deriving instance Show (DataSourceRoute a)
 
-data StateContainerRoute :: * -> * where
-  StateContainerRoute_PostgreSQL :: StateContainerRoute ()  
-  StateContainerRoute_RocksDB :: StateContainerRoute ()
-  StateContainerRoute_SQLLite :: StateContainerRoute ()
-deriving instance Show (StateContainerRoute a)
+data DataServiceRoute :: * -> * where
+  DataServiceRoute_QueryService_PostgREST :: DataServiceRoute ()
+  DataServiceRoute_QueryService_ElasticSearch :: DataServiceRoute ()
+  DataServiceRoute_QueryService_HBase :: DataServiceRoute ()
+  DataServiceRoute_QueryService_Kudu :: DataServiceRoute ()
+  DataServiceRoute_FileService_MinIO :: DataServiceRoute ()
+  DataServiceRoute_FileService_HDFS :: DataServiceRoute ()
+  DataServiceRoute_FileService_SFtp :: DataServiceRoute ()
+  DataServiceRoute_NotifyService_WebHook :: DataServiceRoute ()
+  DataServiceRoute_NotifyService_Email :: DataServiceRoute ()
+deriving instance Show (DataServiceRoute a)  
 
-data QueryServiceRoute :: * -> * where
-  QueryServiceRoute_PostgREST :: QueryServiceRoute ()
-  QueryServiceRoute_ElasticSearch :: QueryServiceRoute ()
-  QueryServiceRoute_HBase :: QueryServiceRoute ()
-  QueryServiceRoute_Kudu :: QueryServiceRoute ()  
-deriving instance Show (QueryServiceRoute a)  
-  
-data FileServiceRoute :: * -> * where
-  FileServiceRoute_MinIO :: FileServiceRoute ()
-  FileServiceRoute_HDFS :: FileServiceRoute ()
-  FileServiceRoute_SFtp :: FileServiceRoute ()
-
-data NotifyServiceRoute :: * -> * where
-  NotifyServiceRoute_WebHook :: NotifyServiceRoute ()
-  NotifyServiceRoute_Email :: NotifyServiceRoute ()
-  
 backendRouteEncoder
   :: Encoder (Either Text) Identity (R (Sum BackendRoute (ObeliskRoute FrontendRoute))) PageName
 backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
@@ -116,7 +112,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       FrontendRoute_Main -> PathEnd $ unitEncoder mempty
       FrontendRoute_DataNetwork -> PathSegment "dataNetwork" $
         pathComponentEncoder $ \case
-          DataNetworkRoute_OneClickRun -> PathSegment "oneClickRun" $ unitEncoder mempty
+          DataNetworkRoute_EventPulse -> PathSegment "eventPulse" $ unitEncoder mempty
           DataNetworkRoute_EffectEngine -> PathSegment "effectEngine" $ unitEncoder mempty
           DataNetworkRoute_LogicFragement -> PathSegment "logicFragement" $ unitEncoder mempty
           DataNetworkRoute_DataConduit -> PathSegment "dataConduit" $ unitEncoder mempty
@@ -127,35 +123,32 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
           EventSourceRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
           EventSourceRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
           EventSourceRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
-      FrontendRoute_DataSource -> PathSegment "dataSource" $
---        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
+          
+      FrontendRoute_DataSandbox -> PathSegment "dataSandbox" $
         pathComponentEncoder $ \case
-          DataSourceRoute_Kafka -> PathSegment "kafka" $ unitEncoder mempty
-          DataSourceRoute_WebSocket -> PathSegment "webSocket" $ unitEncoder mempty
-          DataSourceRoute_RestAPI -> PathSegment "restApi" $ unitEncoder mempty          
-          DataSourceRoute_SQLCursor -> PathSegment "sqlCursor" $ unitEncoder mempty
-          DataSourceRoute_MinIO -> PathSegment "minIO" $ unitEncoder mempty
-      FrontendRoute_StateContainer -> PathSegment "stateContainer" $
---        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
-        pathComponentEncoder $ \case
-          StateContainerRoute_PostgreSQL -> PathSegment "postgreSQL" $ unitEncoder mempty        
-          StateContainerRoute_RocksDB -> PathSegment "rocksDB" $ unitEncoder mempty
-          StateContainerRoute_SQLLite -> PathSegment "sqlLite" $ unitEncoder mempty
-      FrontendRoute_QueryService -> PathSegment "queryService" $
-        pathComponentEncoder $ \case
-          QueryServiceRoute_PostgREST -> PathSegment "postgREST" $ unitEncoder mempty
-          QueryServiceRoute_ElasticSearch -> PathSegment "elasticSearch" $ unitEncoder mempty
-          QueryServiceRoute_HBase -> PathSegment "hbase" $ unitEncoder mempty
-          QueryServiceRoute_Kudu -> PathSegment "kudu" $ unitEncoder mempty          
-      FrontendRoute_FileService -> PathSegment "fileService" $
-        pathComponentEncoder $ \case
-          FileServiceRoute_MinIO -> PathSegment "minio" $ unitEncoder mempty
-          FileServiceRoute_HDFS -> PathSegment "hdfs" $ unitEncoder mempty
-          FileServiceRoute_SFtp -> PathSegment "sftp" $ unitEncoder mempty
-      FrontendRoute_NotifyService -> PathSegment "notifyService" $
-        pathComponentEncoder $ \case
-          NotifyServiceRoute_WebHook -> PathSegment "webHook" $ unitEncoder mempty
-          NotifyServiceRoute_Email -> PathSegment "email" $ unitEncoder mempty          
+          DataSandboxRoute_StateContainer -> PathSegment "stateContainer" $
+            pathComponentEncoder $ \case
+              StateContainerRoute_PostgreSQL -> PathSegment "postgreSQL" $ unitEncoder mempty        
+              StateContainerRoute_RocksDB -> PathSegment "rocksDB" $ unitEncoder mempty
+              StateContainerRoute_SQLLite -> PathSegment "sqlLite" $ unitEncoder mempty
+          DataSandboxRoute_DataSource -> PathSegment "dataSource" $
+            pathComponentEncoder $ \case
+              DataSourceRoute_Kafka -> PathSegment "kafka" $ unitEncoder mempty
+              DataSourceRoute_WebSocket -> PathSegment "webSocket" $ unitEncoder mempty
+              DataSourceRoute_RestAPI -> PathSegment "restApi" $ unitEncoder mempty          
+              DataSourceRoute_SQLCursor -> PathSegment "sqlCursor" $ unitEncoder mempty
+              DataSourceRoute_MinIO -> PathSegment "minIO" $ unitEncoder mempty
+          DataSandboxRoute_DataService -> PathSegment "dataService" $
+            pathComponentEncoder $ \case
+              DataServiceRoute_QueryService_PostgREST -> PathSegment "queryService_postgREST" $ unitEncoder mempty
+              DataServiceRoute_QueryService_ElasticSearch -> PathSegment "queryService_elasticSearch" $ unitEncoder mempty
+              DataServiceRoute_QueryService_HBase -> PathSegment "queryService_hbase" $ unitEncoder mempty
+              DataServiceRoute_QueryService_Kudu -> PathSegment "queryService_kudu" $ unitEncoder mempty          
+              DataServiceRoute_FileService_MinIO -> PathSegment "fileService_minio" $ unitEncoder mempty
+              DataServiceRoute_FileService_HDFS -> PathSegment "fileService_hdfs" $ unitEncoder mempty
+              DataServiceRoute_FileService_SFtp -> PathSegment "fileService_sftp" $ unitEncoder mempty
+              DataServiceRoute_NotifyService_WebHook -> PathSegment "notifyService_webHook" $ unitEncoder mempty
+              DataServiceRoute_NotifyService_Email -> PathSegment "notifyService_email" $ unitEncoder mempty          
         
           
 concat <$> mapM deriveRouteComponent
@@ -165,9 +158,8 @@ concat <$> mapM deriveRouteComponent
   , ''FrontendRoute
   , ''DataNetworkRoute  
   , ''EventSourceRoute
+  , ''DataSandboxRoute
   , ''DataSourceRoute
   , ''StateContainerRoute
-  , ''QueryServiceRoute
-  , ''FileServiceRoute
-  , ''NotifyServiceRoute
+  , ''DataServiceRoute
   ]

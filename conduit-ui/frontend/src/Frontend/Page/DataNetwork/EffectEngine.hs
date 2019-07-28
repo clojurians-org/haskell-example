@@ -9,6 +9,7 @@ module Frontend.Page.DataNetwork.EffectEngine
   (dataNetwork_effectEngine_handle, dataNetwork_effectEngine) where
 
 import Common.WebSocketMessage
+import Common.Types.DataNetwork
 import Prelude
 
 import Reflex.Dom.Core

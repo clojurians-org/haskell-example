@@ -12,7 +12,7 @@
 module Frontend where
 
 import Common.WebSocketMessage
-import Frontend.Page.DataNetwork.OneClickRun (dataNetwork_oneClickRun_handle, dataNetwork_oneClickRun)
+import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse_handle, dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
@@ -65,7 +65,7 @@ nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据网络"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_OneClickRun :/ ()) $ text "一键实时"
+      divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_EventPulse :/ ()) $ text "事件脉冲"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataCircuit :/ ()) $ text "数据电路"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_DataConduit :/ ()) $ text "数据导管"
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_LogicFragement :/ ()) $ text "逻辑碎片"      
@@ -79,41 +79,50 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控"
 
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "数据源"
-    divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_Kafka :/ ()) $ text "Kafka"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_RestAPI :/ ()) $ text "RestAPI"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_SQLCursor :/ ()) $ text "SQL游标"
-      divClass "item" $ routeLink (FrontendRoute_DataSource :/ DataSourceRoute_MinIO :/ ()) $ text "MinIO"
-      
-  divClass "item" $ do
     elClass "h4" "ui header" $ text "状态容器"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_PostgreSQL :/ ()) $ text "PostgreSQL"
-      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
-      divClass "item" $ routeLink (FrontendRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_StateContainer :/ StateContainerRoute_PostgreSQL :/ ()) $ text "PostgreSQL"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_StateContainer :/ StateContainerRoute_RocksDB :/ ()) $ text "RocksDB"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_StateContainer :/ StateContainerRoute_SQLLite :/ ()) $ text "SQLLite"
+
+  divClass "item" $ do
+    elClass "h4" "ui header" $ text "数据源"
+    divClass "menu" $ do
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataSource :/ DataSourceRoute_Kafka :/ ()) $ text "Kafka"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataSource :/ DataSourceRoute_WebSocket :/ ()) $ text "WebSocket"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataSource :/ DataSourceRoute_RestAPI :/ ()) $ text "RestAPI"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataSource :/ DataSourceRoute_SQLCursor :/ ()) $ text "SQL游标"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataSource :/ DataSourceRoute_MinIO :/ ()) $ text "MinIO"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "查询服务"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_PostgREST :/ ()) $ text "PostgREST"
-      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_ElasticSearch :/ ()) $ text "ElasticSearch"
-      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_HBase :/ ()) $ text "Hbase"
-      divClass "item" $ routeLink (FrontendRoute_QueryService :/ QueryServiceRoute_Kudu :/ ()) $ text "Kudu"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_QueryService_PostgREST :/ ()) $
+        text "PostgREST"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_QueryService_ElasticSearch :/ ()) $
+        text "ElasticSearch"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_QueryService_PostgREST :/ ()) $
+        text "Hbase"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_QueryService_PostgREST :/ ()) $
+        text "Kudu"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "文件服务"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_MinIO :/ ()) $ text "Minio"
-      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_HDFS :/ ()) $ text "HDFS"
-      divClass "item" $ routeLink (FrontendRoute_FileService :/ FileServiceRoute_SFtp :/ ()) $ text "Ftp/SFtp"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_FileService_MinIO :/ ()) $
+        text "Minio"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_FileService_HDFS :/ ()) $
+        text "HDFS"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_FileService_SFtp :/ ()) $
+        text "Ftp/SFtp"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "通知服务"
     divClass "menu" $ do
-      divClass "item" $ text "WebHook"
-      divClass "item" $ text "Email"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_NotifyService_WebHook :/ ()) $
+        text "WebHook"
+      divClass "item" $ routeLink (FrontendRoute_DataSandbox :/ DataSandboxRoute_DataService:/ DataServiceRoute_NotifyService_Email :/ ()) $
+        text "Email"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "报表服务"
@@ -134,7 +143,7 @@ page :: forall t js m r.
   -> RoutedT t (R FrontendRoute) m (Event t [WSRequestMessage])
 page wsST wsResponseEvt = do
   let wsSTNotUsed = undefined  
-  dataNetwork_oneClickRun_st <- dataNetwork_oneClickRun_handle wsSTNotUsed wsResponseEvt
+  dataNetwork_eventPulse_st <- dataNetwork_eventPulse_handle wsSTNotUsed wsResponseEvt
   dataNetwork_effectEngine_st <- dataNetwork_effectEngine_handle wsST wsResponseEvt
   dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsST wsResponseEvt
   dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsST wsResponseEvt
@@ -146,7 +155,7 @@ page wsST wsResponseEvt = do
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
       FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
-        DataNetworkRoute_OneClickRun -> dataNetwork_oneClickRun dataNetwork_oneClickRun_st
+        DataNetworkRoute_EventPulse -> dataNetwork_eventPulse dataNetwork_eventPulse_st
         DataNetworkRoute_EffectEngine -> dataNetwork_effectEngine dataNetwork_effectEngine_st
         DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
         DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
@@ -155,25 +164,27 @@ page wsST wsResponseEvt = do
         EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
         EventSourceRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
         EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
-      FrontendRoute_DataSource -> fmap switchDyn $ subRoute $ \case
-        DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
-        DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
-        DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
-        DataSourceRoute_SQLCursor -> dataSource_sqlCursor dataSource_sqlCursor_st
-        DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO" >> return never        
-      FrontendRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
-        StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
-        StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
-        StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
-      FrontendRoute_QueryService -> fmap switchDyn $ subRoute $ \case
-        QueryServiceRoute_PostgREST -> text "my QueryServiceRoute_PostgREST" >> return never
-        QueryServiceRoute_ElasticSearch -> text "my QueryServiceRoute_ElasticSearch" >> return never
-        QueryServiceRoute_HBase -> text "my QueryServiceRoute_HBase" >> return never
-        QueryServiceRoute_Kudu -> text "my QueryServiceRoute_Kudu" >> return never                
-      FrontendRoute_FileService -> fmap switchDyn $ subRoute $ \case
-        FileServiceRoute_MinIO -> text "my FileServiceRoute_MinIO" >> return never
-        FileServiceRoute_HDFS -> text "my FileServiceRoute_HDFS" >> return never
-        FileServiceRoute_SFtp -> text "my FileServiceRoute_SFtp" >> return never
+      FrontendRoute_DataSandbox -> fmap switchDyn $ subRoute $ \case
+        DataSandboxRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
+          StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
+          StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
+          StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
+        DataSandboxRoute_DataSource -> fmap switchDyn $ subRoute $ \case
+          DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
+          DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
+          DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
+          DataSourceRoute_SQLCursor -> dataSource_sqlCursor dataSource_sqlCursor_st
+          DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO" >> return never        
+        DataSandboxRoute_DataService -> fmap switchDyn $ subRoute $ \case
+          DataServiceRoute_QueryService_PostgREST -> text "my DataServiceRoute_QueryService_PostgREST" >> return never
+          DataServiceRoute_QueryService_ElasticSearch -> text "my DataServiceRoute_QueryService_ElasticSearch" >> return never
+          DataServiceRoute_QueryService_HBase -> text "my DataServiceRoute_QueryService_HBase" >> return never
+          DataServiceRoute_QueryService_Kudu -> text "my DataServiceRoute_QueryService_Kudu" >> return never                
+          DataServiceRoute_FileService_MinIO -> text "my DataServiceRoute_FileService_MinIO" >> return never
+          DataServiceRoute_FileService_HDFS -> text "my DataServiceRoute_FileService_HDFS" >> return never
+          DataServiceRoute_FileService_SFtp -> text "my DataServiceRoute_FileService_SFtp" >> return never
+          DataServiceRoute_NotifyService_WebHook -> text "my DataServiceRoute_NotifyService_WebHook" >> return never
+          DataServiceRoute_NotifyService_Email -> text "my DataServiceRoute_NotifyService_Email" >> return never
 
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js m, MonadHold t m

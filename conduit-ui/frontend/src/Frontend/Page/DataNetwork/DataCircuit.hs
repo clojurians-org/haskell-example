@@ -4,15 +4,20 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Frontend.Page.DataNetwork.DataCircuit
   (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit) where
 
 import Common.WebSocketMessage
+import Common.Types.DataNetwork
+import Common.Types.DataSandbox
 import Prelude
 
 import Reflex.Dom.Core
+import Frontend.Class (ToUI(toLabel, toIcon, toDOM))
 
+import Text.Heredoc (str)
 import GHC.Generics (Generic)
 import Control.Monad (forM, forM_, void)
 import Control.Monad.Fix (MonadFix)
@@ -39,17 +44,17 @@ exampleDataCircuits =
         , dataCircuit_xid = Just 2 }
   , def { dataCircuit_name = "FilePushPlatform"
         , dataCircuit_desc = "文件下传平台"
-        , dataCircuit_dataSources = [ DataSource_SQLCursor ]
-        , dataCircuit_dataServices = [ DataService_FileService_MinIO ]
+        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
+        , dataCircuit_dataServices = [ DataServiceHolder_FileService_MinIO ]
         , dataCircuit_xid = Just 3 }
   , def { dataCircuit_name = "dataQueryPlatform"
         , dataCircuit_desc = "数据查询平台"
-        , dataCircuit_dataSources = [ DataSource_SQLCursor ]
+        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
         , dataCircuit_xid = Just 4}
   , def { dataCircuit_name = "ExternalDataPlatform"
         , dataCircuit_desc = "外部数据平台"
-        , dataCircuit_stateContainers = [ StateContainer_PostgreSQL ]
-        , dataCircuit_dataSources = [ DataSource_SQLCursor ]
+        , dataCircuit_stateContainers = [ StateContainerHolder_PostgreSQL ]
+        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
         , dataCircuit_xid = Just 5 }
   , def { dataCircuit_name = "LogPullPlatform"
         , dataCircuit_desc = "日志抽取平台"
@@ -64,37 +69,41 @@ exampleDataCircuits =
         , dataCircuit_desc = "机器学习平台"
         , dataCircuit_xid = Just 9 }
     ]
-  
+
+exampleEffectCode :: T.Text
+exampleEffectCode =
+  [str|do
+      |  sourceTBMChan {{ DataSource_SQLCursor }}
+      |    .| C.take 2
+      |    .| {{ DataService_FileService_MinIO }}
+      |]
+
 examplePartCombinator :: DataCircuit -> TR.Tree DataCircuitPart
 examplePartCombinator dataCircuit = do
   TR.Node def
     [ flip TR.Node [] $ DataCircuitPart_EmbededDataConduit $ def
         { dataConduit_name = ""
         , dataConduit_dataSources = (dataCircuit_dataSources dataCircuit)
+        , dataConduit_partCombinator =
+            TR.Node def
+              [ flip TR.Node [] $ DataConduitPart_EmbededLogicFragment $ def
+                  { logicFragment_name = ""
+                  , logicFragment_desc = ""
+                  , logicFragment_effectEngineCode =
+                      ( Just ConduitEngine, exampleEffectCode ) }
+              ]
           }
     ]
---    [TR.Node (EmbededDataConduit (DataConduit2 "内嵌数据导管"))
---      ]
 
-partCombinatorDOM :: DomBuilder t m
-  => T.Text -> TR.Tree DataCircuitPart -> m ()
-partCombinatorDOM iconText (TR.Node x xs) =
-  case isDataCircuitPartRootNode x of
-    True -> divClass "list" $ forM_ xs (partCombinatorDOM (icon x))
-    False ->
-      divClass "item" $ do
-        elClass "i" iconText blank
-        divClass "content" $ divClass "header" $ text (label x) 
-        divClass "list" $ forM_ xs (partCombinatorDOM (icon x))
 
 dataCircuitDOM :: DomBuilder t m
   => TR.Tree DataCircuitPart -> m ()
 dataCircuitDOM rootNode =
   divClass "ui item" $ do
-    elClass "i" "handshake outline icon" blank
+    elClass "i" "random icon" blank
     divClass "content" $ do
       divClass "header" $ text "DataCircuit-数据电路"
-    partCombinatorDOM undefined rootNode
+    toDOM undefined rootNode
   
   
 dataNetwork_dataCircuit_handle
@@ -111,7 +120,7 @@ theadUI
   => m ()
 theadUI = do
   el "thead" $ el "tr" $ do
-    el "th"  $ checkbox False def
+    el "th"  $ divClass "ui fitted checkbox fields" $ checkbox False def >> el "label" blank
     el "th"  $ text "名称"
     el "th"  $ text "描述"
     el "th"  $ text "状态容器"
@@ -125,6 +134,7 @@ theadUI = do
     elClass "th" "" $ text "配置数据模式"    
     elClass "th" "" $ text "请求数据模式"
     elClass "th" "" $ text "响应数据模式"
+
     --}
 
 tbodyUI
@@ -148,7 +158,9 @@ tbodyUI wsDyn = do
     simpleList wsDyn $ \conduitDyn -> do
       pb <- getPostBuild
       elDynAttr "tr" (constDyn M.empty) $ do
-        deleteSelect <- el "td" $ checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
+        deleteSelect <- el "td" $ divClass "ui fitted checkbox fields" $ do
+          checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
+          el "label" $ blank
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
           inputElement $ def & inputElementConfig_setValue .~ leftmost
             [ updated conduitDyn <&> dataCircuit_name
@@ -247,7 +259,10 @@ dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
     divClass "" $ do
       divClass "ui top attached segment" $ do
         elClass "h4" "ui header" $ text "代码浏览器"
-      divClass "ui attached segment" $ do
-        text "a <$> b <*> <*> c"
+      divClass "ui attached segment" $ divClass "ui form field" $ do
+        textAreaElement $ def
+          & initialAttributes .~ ("rows" =: "20")
+          & textAreaElementConfig_initialValue .~ exampleEffectCode
+       
 
   return never
