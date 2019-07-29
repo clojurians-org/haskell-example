@@ -18,137 +18,145 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
+data GlobalDataSandbox = GlobalDataSandbox {
+    gdsaStateContainers :: [(Int64, StateContainer)]
+  , gdsaDataSources :: [(Int64, DataSource)]
+  , gdsaDataServices :: [(Int64, DataService)]
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON GlobalDataSandbox
+instance J.FromJSON GlobalDataSandbox
+instance Default GlobalDataSandbox
 
 data LinkedDataSandbox = LinkedDataSandbox {
-    linkedDataSandbox_stateContainers :: [(Int64, T.Text)]
-  , linkedDataSandbox_dataSources :: [(Int64, T.Text)]
-  , linkedDataSandbox_dataServices :: [(Int64, T.Text)]
+    ldsaStateContainers :: [(Int64, StateContainer)]
+  , ldsaDataSources :: [(Int64, DataSource)]
+  , ldsaDataServices :: [(Int64, DataService)]
   } deriving (Generic, Show, Eq)
 instance J.ToJSON LinkedDataSandbox
 instance J.FromJSON LinkedDataSandbox
 instance Default LinkedDataSandbox
 
 data DataSandbox = DataSandbox {
-    dataSandbox_stateContainers :: [StateContainer]
-  , dataSandbox_dataSources :: [DataSource]
-  , dataSandbox_dataServices :: [DataService]
+    dsaStateContainers :: [StateContainer]
+  , dsaSataSources :: [DataSource]
+  , dsaDataServices :: [DataService]
   } deriving (Generic, Show, Eq)
 instance J.ToJSON DataSandbox
 instance J.FromJSON DataSandbox
 instance Default DataSandbox
 
 data DataSandboxHolder = DataSandboxHolder {
-    dataSandboxHolder_stateContainers :: [StateContainerHolder]
-  , dataSandboxHolder_dataSources :: [DataSourceHolder]
-  , dataSandboxHolder_dataServices :: [DataServiceHolder]
+    dsahStateContainers :: [StateContainerHolder]
+  , dsahDataSources :: [DataSourceHolder]
+  , dsahDataServices :: [DataServiceHolder]
   } deriving (Generic, Show, Eq)
 instance J.ToJSON DataSandboxHolder
 instance J.FromJSON DataSandboxHolder
 instance Default DataSandboxHolder
 
-data StateContainerHolder = StateContainerHolder_PostgreSQL
-                          | StateContainerHolder_RocksDB
-                          | StateContainerHolder_SQLLite
+data StateContainerHolder = SCH_PostgreSQL
+                          | SCH_RocksDB
+                          | SCH_SQLLite
   deriving (Generic, Show, Eq)
 instance J.ToJSON StateContainerHolder
 instance J.FromJSON StateContainerHolder
 
-data StateContainer = StateContainer_PostgreSQL PostgreSQL_StateContainer
-                    | StateContainer_RocksDB RocksDB_StateContainer
-                    | StateContainer_SQLLite SQLLite_StateContainer
+data StateContainer = SC_PostgreSQL SCPostgreSQL
+                    | SC_RocksDB SCRocksDB
+                    | SC_SQLLite SCSQLLite
   deriving (Generic, Show, Eq)
 instance J.ToJSON StateContainer
 instance J.FromJSON StateContainer
                     
-data PostgreSQL_StateContainer = PostgreSQL_StateContainer
+data SCPostgreSQL = SCPostgreSQL
   deriving (Generic, Show, Eq)
-instance J.ToJSON PostgreSQL_StateContainer
-instance J.FromJSON PostgreSQL_StateContainer
-instance Default PostgreSQL_StateContainer
+instance J.ToJSON SCPostgreSQL
+instance J.FromJSON SCPostgreSQL
+instance Default SCPostgreSQL
 
-data RocksDB_StateContainer = RocksDB_StateContainer
+data SCRocksDB = SCRocksDB
   deriving (Generic, Show, Eq)
-instance J.FromJSON RocksDB_StateContainer
-instance J.ToJSON RocksDB_StateContainer
-instance Default RocksDB_StateContainer
+instance J.FromJSON SCRocksDB
+instance J.ToJSON SCRocksDB
+instance Default SCRocksDB
 
-data SQLLite_StateContainer = SQLLite_StateContainer
+data SCSQLLite = SCSQLLite
   deriving (Generic, Show, Eq)
-instance J.FromJSON SQLLite_StateContainer
-instance J.ToJSON SQLLite_StateContainer
-instance Default SQLLite_StateContainer
+instance J.FromJSON SCSQLLite
+instance J.ToJSON SCSQLLite
+instance Default SCSQLLite
 
-data DataSourceHolder = DataSourceHolder_RestAPI
-                      | DataSourceHolder_SQLCursor
-                      | DataSourceHolder_MinIO
+data DataSourceHolder = DSOH_RestAPI
+                      | DSOH_SQLCursor
+                      | DSOH_MinIO
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataSourceHolder
 instance J.FromJSON DataSourceHolder
 
-data DataSource = DataSource_SQLCursor SQLCursor_DataSource
-                | DataSource_MinIO MinIO_DataSource
-                | DataSource_RestAPI RestAPI_DataSource
+data DataSource = DSO_SQLCursor DSOSQLCursor
+                | DSO_MinIO DSOMinIO
+                | DSO_RestAPI DSORestAPI
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataSource
 instance J.FromJSON DataSource
 
-data RestAPI_DataSource = RestAPI_DataSource
-  { restAPI_dataSource_name :: T.Text
-  , restAPI_dataSource_host :: T.Text }
+data DSORestAPI = DSORestAPI
+  { dsoRestAPIName :: T.Text
+  , dsoRestAPIHost :: T.Text }
   deriving (Generic, Show, Eq)
-instance J.ToJSON RestAPI_DataSource
-instance J.FromJSON RestAPI_DataSource
-instance Default RestAPI_DataSource
+instance J.ToJSON DSORestAPI
+instance J.FromJSON DSORestAPI
+instance Default DSORestAPI
 
-data SQLCursor_DataSource = SQLCursor_DataSource
-  { sqlCursor_dataSource_name :: T.Text
-  , sqlCursor_dataSource_type :: T.Text
-  , sqlCursor_dataSource_host :: T.Text
-  , sqlCursor_dataSource_database :: T.Text
-  , sqlCursor_dataSource_username :: T.Text
-  , sqlCursor_dataSource_password :: T.Text
-  , sqlCursor_dataSource_table :: T.Text
-  , sqlCursor_dataSource_fields :: [T.Text]
-  , sqlCursor_dataSource_xid :: Maybe Int64 }
+data DSOSQLCursor = DSOSQLCursor
+  { dsoSQLCursorName :: T.Text
+  , dsoSQLCursorType :: T.Text
+  , dsoSQLCursorHost :: T.Text
+  , dsoSQLCursorDatabase :: T.Text
+  , dsoSQLCursorUsername :: T.Text
+  , dsoSQLCursorPassword :: T.Text
+  , dsoSQLCursorTable :: T.Text
+  , dsoSQLCursorFields :: [T.Text]
+  , dsoSQLXid :: Maybe Int64 }
   deriving (Generic, Show, Eq)
-instance J.ToJSON SQLCursor_DataSource
-instance J.FromJSON SQLCursor_DataSource
-instance Default SQLCursor_DataSource
+instance J.ToJSON DSOSQLCursor
+instance J.FromJSON DSOSQLCursor
+instance Default DSOSQLCursor
 
-data MinIO_DataSource = MinIO_DataSource
-  { minIO_dataSource_name :: T.Text
-  , minIO_dataSource_xid :: Maybe Int64 }
+data DSOMinIO = DSOMinIO
+  { dsoMinioName :: T.Text
+  , dsoMinioXid :: Maybe Int64 }
   deriving (Generic, Show, Eq)
-instance J.ToJSON MinIO_DataSource
-instance J.FromJSON MinIO_DataSource
-instance Default MinIO_DataSource
+instance J.ToJSON DSOMinIO
+instance J.FromJSON DSOMinIO
+instance Default DSOMinIO
 
 
-data DataServiceHolder = DataServiceHolder_QueryService_PostgREST
-                     | DataServiceHolder_QueryService_ElasticSearch
-                     | DataServiceHolder_QueryService_HBase
-                     | DataServiceHolder_QueryService_Kudu
-                     | DataServiceHolder_FileService_MinIO
-                     | DataServiceHolder_FileService_HDFS
-                     | DataServiceHolder_FileService_SFtp
+data DataServiceHolder = DSEH_QueryService_PostgREST
+                     | DSEH_QueryService_ElasticSearch
+                     | DSEH_QueryService_HBase
+                     | DSEH_QueryService_Kudu
+                     | DSEH_FileService_MinIO
+                     | DSEH_FileService_HDFS
+                     | DSEH_FileService_SFtp
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataServiceHolder
 instance J.FromJSON DataServiceHolder
 
-data DataService = DataService_QueryService_PostgREST PostgREST_QueryService
-                 | DataService_FileService_MinIO MinIO_FileService
+data DataService = DSE_QueryService_PostgREST DSEQSPostgREST
+                 | DSE_FileService_MinIO DSEFSMinIO
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataService
 instance J.FromJSON DataService
 
-data PostgREST_QueryService = PostgREST_QueryService
+data DSEQSPostgREST = DSEQSPostgREST
   deriving (Generic, Show, Eq)
-instance J.ToJSON PostgREST_QueryService
-instance J.FromJSON PostgREST_QueryService
-instance Default PostgREST_QueryService
+instance J.ToJSON DSEQSPostgREST
+instance J.FromJSON DSEQSPostgREST
+instance Default DSEQSPostgREST
 
-data MinIO_FileService = MinIO_FileService
+data DSEFSMinIO = DSEFSMinIO
   deriving (Generic, Show, Eq)
-instance J.ToJSON MinIO_FileService
-instance J.FromJSON MinIO_FileService
-instance Default MinIO_FileService
+instance J.ToJSON DSEFSMinIO
+instance J.FromJSON DSEFSMinIO
+instance Default DSEFSMinIO

@@ -5,8 +5,10 @@
 module Common.WebSocketMessage where
 
 import Prelude
-import Common.Types.DataSandbox
+
 import Common.Types.DataNetwork
+import Common.Types.DataSandbox
+import Common.Types.EventLake
 
 import GHC.Int (Int64)
 
@@ -19,62 +21,54 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
-data CronTimer = CronTimer {
-    ce_name :: T.Text
-  , ce_expr :: T.Text
-  , ce_xid :: Maybe Int64
-  } deriving (Generic, Show)
-instance J.ToJSON CronTimer
-instance J.FromJSON CronTimer
-
-isSameCronXID :: CronTimer -> CronTimer -> Bool
-isSameCronXID (CronTimer _  _ id1) (CronTimer _  _ id2) = id1 == id2
-
 data AppST = AppST {
-    _appST_cronTimers :: [CronTimer]
+    appSTDataNetwork :: GlobalDataNetwork
+  , appSTDataSandbox :: GlobalDataSandbox
+  , appSTEventLake :: GlobalEventLake
   } deriving (Generic, Show)
 instance J.ToJSON AppST
 instance J.FromJSON AppST
 instance Default AppST
-
 data WSRequestMessage = HaskellCodeRunRequest T.Text
-                    | HttpEventInvokeRequest T.Text
+                    -- EventPulse
+                    | EventPulseCREQ EventPulse
+                    | EventPulseAREQ T.Text
+                    | EventPulseKREQ T.Text                    
                     -- CronTimer
-                    | CronTimerCreateRequest CronTimer
-                    | CronTimerReadRequest Int64
-                    | CronTimerUpdateRequest CronTimer
-                    | CronTimerDeleteRequest Int64
-                    | CronTimerActiveRequest Int64
-                    | CronTimerKillRequest Int64
+                    | ELCronTimerCREQ ELCronTimer
+                    | ELCronTimerRREQ Int64
+                    | ELCronTimerUREQ ELCronTimer
+                    | ELCronTimerDREQ Int64
                     -- SQLCursor
-                    | SQLCursorCreateRequest SQLCursor_DataSource
-                    | SQLCursorReadRequest Int64
-                    | SQLCursorUpdateRequest SQLCursor_DataSource
-                    | SQLCursorDeleteRequest Int64
-                    | SQLCursorDatabaseReadRequest T.Text
-                    | SQLCursorTableReadRequest T.Text
+                    | DSOSQLCursorCREQ DSOSQLCursor
+                    | DSOSQLCursorRREQ Int64
+                    | DSOSQLCursorUREQ DSOSQLCursor
+                    | DSOSQLCursorDREQ Int64
+                    | DSOSQLCursorDatabaseRREQ T.Text
+                    | DSOSQLCursorTableRREQ T.Text
   deriving (Generic, Show)
 instance J.ToJSON WSRequestMessage
 instance J.FromJSON WSRequestMessage
 
 data WSResponseMessage = WSInitResponse AppST
                      | HaskellCodeRunResponse (Either String ())
-                     | HttpEventInvokeResponse (Either String ())
+                     -- EventPulse
+                     | EventPulseCRES (Either String EventPulse)
+                     | EventPulseARES (Either String ())
+                     | EventPulseKRES (Either String ())                     
                      -- CronTimer
-                     | CronTimerCreateResponse (Either String CronTimer)
-                     | CronTimerReadResponse (Either String CronTimer)
-                     | CronTimerUpdateResponse (Either String CronTimer)
-                     | CronTimerDeleteResponse (Either String Int64)
-                     | CronTimerActiveResponse (Either String Int64)
-                     | CronTimerKillResponse (Either String Int64)
+                     | ELCronTimerCRES (Either String ELCronTimer)
+                     | ELCronTimerRRES (Either String ELCronTimer)
+                     | ELCronTimerURES (Either String ELCronTimer)
+                     | ELCronTimerDRES (Either String Int64)
 
                      -- SQLCursor
-                     | SQLCursorCreateResponse (Either String SQLCursor_DataSource)
-                     | SQLCursorReadResponse (Either String SQLCursor_DataSource)
-                     | SQLCursorUpdateResponse (Either String SQLCursor_DataSource)
-                     | SQLCursorDeleteResponse (Either String Int64)
-                     | SQLCursorDatabaseReadResponse (Either String T.Text)
-                     | SQLCursorTableReadResponse (Either String T.Text)
+                     | DSOSQLCursorCRES (Either String DSOSQLCursor)
+                     | DSOSQLCursorRRES (Either String DSOSQLCursor)
+                     | DSOSQLCursorURES (Either String DSOSQLCursor)
+                     | DSOSQLCursorDRES (Either String Int64)
+                     | DSOSQLCursorDatabaseRRES (Either String T.Text)
+                     | DSOSQLCursorTableRRES (Either String T.Text)
                      
                      -- Unkown
                      | WSResponseUnknown WSRequestMessage
@@ -85,9 +79,9 @@ instance J.FromJSON WSResponseMessage
 ----------------
 -- Request
 ----------------
-isCronTimerDeleteRequest :: WSRequestMessage -> Bool
-isCronTimerDeleteRequest (CronTimerDeleteRequest  _) = True
-isCronTimerDeleteRequest _ = False
+isELCronTimerDREQ :: WSRequestMessage -> Bool
+isELCronTimerDREQ (ELCronTimerDREQ  _) = True
+isELCronTimerDREQ _ = False
 
 ----------------
 -- Response
@@ -101,38 +95,38 @@ isHaskellCodeRunResponse (HaskellCodeRunResponse  _) = True
 isHaskellCodeRunResponse _ = False
 
 -- CronTimer
-isCronTimerCreateResponse :: WSResponseMessage -> Bool
-isCronTimerCreateResponse (CronTimerCreateResponse  _) = True
-isCronTimerCreateResponse _ = False
+isELCronTimerCRES :: WSResponseMessage -> Bool
+isELCronTimerCRES (ELCronTimerCRES  _) = True
+isELCronTimerCRES _ = False
 
-isCronTimerUpdateResponse :: WSResponseMessage -> Bool
-isCronTimerUpdateResponse (CronTimerUpdateResponse  _) = True
-isCronTimerUpdateResponse _ = False
+isELCronTimerURES :: WSResponseMessage -> Bool
+isELCronTimerURES (ELCronTimerURES  _) = True
+isELCronTimerURES _ = False
 
-isCronTimerDeleteResponse :: WSResponseMessage -> Bool
-isCronTimerDeleteResponse (CronTimerDeleteResponse  _) = True
-isCronTimerDeleteResponse _ = False
+isELCronTimerDRES :: WSResponseMessage -> Bool
+isELCronTimerDRES (ELCronTimerDRES  _) = True
+isELCronTimerDRES _ = False
 
 -- SQLCursor
-isSQLCursorCreateResponse :: WSResponseMessage -> Bool
-isSQLCursorCreateResponse (SQLCursorCreateResponse  _) = True
-isSQLCursorCreateResponse _ = False
+isDSOSQLCursorCRES :: WSResponseMessage -> Bool
+isDSOSQLCursorCRES (DSOSQLCursorCRES  _) = True
+isDSOSQLCursorCRES _ = False
 
-isSQLCursorUpdateResponse :: WSResponseMessage -> Bool
-isSQLCursorUpdateResponse (SQLCursorUpdateResponse  _) = True
-isSQLCursorUpdateResponse _ = False
+isDSOSQLCursorURES :: WSResponseMessage -> Bool
+isDSOSQLCursorURES (DSOSQLCursorURES  _) = True
+isDSOSQLCursorURES _ = False
 
-isSQLCursorDeleteResponse :: WSResponseMessage -> Bool
-isSQLCursorDeleteResponse (SQLCursorDeleteResponse  _) = True
-isSQLCursorDeleteResponse _ = False
+isDSOSQLCursorDRES :: WSResponseMessage -> Bool
+isDSOSQLCursorDRES (DSOSQLCursorDRES  _) = True
+isDSOSQLCursorDRES _ = False
 
-isSQLCursorDatabaseReadResponse :: WSResponseMessage -> Bool
-isSQLCursorDatabaseReadResponse (SQLCursorDatabaseReadResponse _) = True
-isSQLCursorDatabaseReadResponse _ = False
+isDSOSQLCursorDatabaseRRES :: WSResponseMessage -> Bool
+isDSOSQLCursorDatabaseRRES (DSOSQLCursorDatabaseRRES _) = True
+isDSOSQLCursorDatabaseRRES _ = False
 
-isSQLCursorTableReadResponse :: WSResponseMessage -> Bool
-isSQLCursorTableReadResponse (SQLCursorTableReadResponse _) = True
-isSQLCursorTableReadResponse _ = False
+isDSOSQLCursorTableRRES :: WSResponseMessage -> Bool
+isDSOSQLCursorTableRRES (DSOSQLCursorTableRRES _) = True
+isDSOSQLCursorTableRRES _ = False
 
 (&&&) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (&&&) = liftA2 (&&)
@@ -141,4 +135,3 @@ infixr 3 &&&
 (|||) :: (a -> Bool) -> (a -> Bool) -> a -> Bool
 (|||) = liftA2 (||)
 infixr 3 |||
-

@@ -18,7 +18,7 @@ import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, 
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
-import Frontend.Page.EventSource.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
+import Frontend.Page.EventLake.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
 import Frontend.Page.DataSandbox.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
 import Prelude
@@ -73,10 +73,10 @@ nav = do
       divClass "item" $ routeLink (FrontendRoute_DataNetwork :/ DataNetworkRoute_EffectEngine :/ ()) $ text "实效引擎"
       
   divClass "item" $ do
-    elClass "h4" "ui header" $ text "事件源"
+    elClass "h4" "ui header" $ text "事件湖"
     divClass "menu" $ do
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronTimer :/ ()) $ text "Cron定时器"      
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控器"
+      divClass "item" $ routeLink (FrontendRoute_EventLake :/ EventLakeRoute_CronTimer :/ ()) $ text "Cron定时器"      
+      divClass "item" $ routeLink (FrontendRoute_EventLake :/ EventLakeRoute_FileWatcher :/ ()) $ text "文件监控器"
       divClass "item" $ text "SQL扫描器"
 
   divClass "item" $ do
@@ -161,10 +161,10 @@ page wsST wsResponseEvt = do
         DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
         DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
         DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit dataNetwork_dataCircuit_st
-      FrontendRoute_EventSource -> fmap switchDyn $ subRoute $ \case
-        EventSourceRoute_HttpRequest -> text "my EventSourceRoute_HttpRequest" >> return never
-        EventSourceRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
-        EventSourceRoute_FileWatcher -> text "my EventSourceRoute_FileWatcher" >> return never
+      FrontendRoute_EventLake -> fmap switchDyn $ subRoute $ \case
+        EventLakeRoute_HttpRequest -> text "my EventLakeRoute_HttpRequest" >> return never
+        EventLakeRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
+        EventLakeRoute_FileWatcher -> text "my EventLakeRoute_FileWatcher" >> return never
       FrontendRoute_DataSandbox -> fmap switchDyn $ subRoute $ \case
         DataSandboxRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
           StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never

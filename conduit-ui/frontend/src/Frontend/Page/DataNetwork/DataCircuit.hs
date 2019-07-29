@@ -9,9 +9,10 @@
 module Frontend.Page.DataNetwork.DataCircuit
   (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit) where
 
-import Common.WebSocketMessage
 import Common.Types.DataNetwork
 import Common.Types.DataSandbox
+import Common.ExampleData
+import Common.WebSocketMessage
 import Prelude
 
 import Reflex.Dom.Core
@@ -31,76 +32,6 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Concurrent (MVar, newMVar, putMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
 import qualified Data.Tree as TR
 
-exampleDataCircuits :: [DataCircuit]
-exampleDataCircuits =
-  [ def { dataCircuit_name = "DataCircuitREPL"
-        , dataCircuit_desc = "数据电路REPL"
-        , dataCircuit_xid = Just 0}
-  , def { dataCircuit_name = "FileLoadPlatform"
-        , dataCircuit_desc = "文件加载平台"
-        , dataCircuit_xid = Just 1 }
-  , def { dataCircuit_name = "DWSchedulePlatform"
-        , dataCircuit_desc = "数仓调度平台"
-        , dataCircuit_xid = Just 2 }
-  , def { dataCircuit_name = "FilePushPlatform"
-        , dataCircuit_desc = "文件下传平台"
-        , dataCircuit_dataSandboxHolder = def
-            { dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ]
-            , dataSandboxHolder_dataServices = [ DataServiceHolder_FileService_MinIO ] }
-        , dataCircuit_xid = Just 3 }
-  , def { dataCircuit_name = "dataQueryPlatform"
-        , dataCircuit_desc = "数据查询平台"
-        , dataCircuit_dataSandboxHolder = def
-            { dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ] }
-        , dataCircuit_xid = Just 4}
-  , def { dataCircuit_name = "ExternalDataPlatform"
-        , dataCircuit_desc = "外部数据平台"
-        , dataCircuit_dataSandboxHolder = def
-            { dataSandboxHolder_stateContainers = [ StateContainerHolder_PostgreSQL ]
-            , dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ] }
-        , dataCircuit_xid = Just 5 }
-  , def { dataCircuit_name = "LogPullPlatform"
-        , dataCircuit_desc = "日志抽取平台"
-        , dataCircuit_xid = Just 6 }
-  , def { dataCircuit_name = "StreamingPlatform"
-        , dataCircuit_desc = "流式计算平台"
-        , dataCircuit_xid = Just 7 }
-  , def { dataCircuit_name = "RealtimeAlertPlatform"
-        , dataCircuit_desc = "实时预警平台"
-        , dataCircuit_xid = Just 8 }
-  , def { dataCircuit_name = "MachineLearningPlatform"
-        , dataCircuit_desc = "机器学习平台"
-        , dataCircuit_xid = Just 9 }
-    ]
-
-exampleEffectCode :: T.Text
-exampleEffectCode =
-  [str|do
-      |  sourceTBMChan {{ DataSource_SQLCursor }}
-      |    .| C.take 2
-      |    .| {{ DataService_FileService_MinIO }}
-      |]
-
-examplePartCombinator :: DataCircuit -> TR.Tree DataCircuitPart
-examplePartCombinator dataCircuit = do
-  TR.Node def
-    [ flip TR.Node [] $ DataCircuitPart_EmbededDataConduit $ def
-        { dataConduit_name = ""
-        , dataConduit_dataSources =
-            dataCircuit & dataCircuit_dataSandboxHolder
-                        & dataSandboxHolder_dataSources
-        , dataConduit_partCombinator =
-            TR.Node def
-              [ flip TR.Node [] $ DataConduitPart_EmbededLogicFragment $ def
-                  { logicFragment_name = ""
-                  , logicFragment_desc = ""
-                  , logicFragment_effectEngineCode =
-                      ( Just ConduitEngine, exampleEffectCode ) }
-              ]
-          }
-    ]
-
-
 dataCircuitDOM :: DomBuilder t m
   => TR.Tree DataCircuitPart -> m ()
 dataCircuitDOM rootNode =
@@ -109,7 +40,6 @@ dataCircuitDOM rootNode =
     divClass "content" $ do
       divClass "header" $ text "DataCircuit-数据电路"
     toDOM undefined rootNode
-  
   
 dataNetwork_dataCircuit_handle
   :: forall t m r.

@@ -47,8 +47,8 @@ deriving instance Show (APIRoute a)
 data FrontendRoute :: * -> * where
   FrontendRoute_Main :: FrontendRoute ()
   FrontendRoute_DataNetwork :: FrontendRoute (R DataNetworkRoute)
---  FrontendRoute_EventSource :: FrontendRoute (Maybe (R EventSourceRoute))
-  FrontendRoute_EventSource :: FrontendRoute (R EventSourceRoute)
+--  FrontendRoute_EventLake :: FrontendRoute (Maybe (R EventLakeRoute))
+  FrontendRoute_EventLake :: FrontendRoute (R EventLakeRoute)
   FrontendRoute_DataSandbox :: FrontendRoute (R DataSandboxRoute)
 deriving instance Show (FrontendRoute a)
 
@@ -60,11 +60,11 @@ data DataNetworkRoute :: * -> * where
   DataNetworkRoute_DataCircuit :: DataNetworkRoute ()
 deriving instance Show (DataNetworkRoute a)
 
-data EventSourceRoute :: * -> * where
-  EventSourceRoute_HttpRequest :: EventSourceRoute ()
-  EventSourceRoute_CronTimer :: EventSourceRoute ()
-  EventSourceRoute_FileWatcher :: EventSourceRoute ()
-deriving instance Show (EventSourceRoute a)
+data EventLakeRoute :: * -> * where
+  EventLakeRoute_HttpRequest :: EventLakeRoute ()
+  EventLakeRoute_CronTimer :: EventLakeRoute ()
+  EventLakeRoute_FileWatcher :: EventLakeRoute ()
+deriving instance Show (EventLakeRoute a)
 
 data DataSandboxRoute :: * -> * where
   DataSandboxRoute_DataSource :: DataSandboxRoute (R DataSourceRoute)
@@ -120,12 +120,12 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
           DataNetworkRoute_LogicFragement -> PathSegment "logicFragement" $ unitEncoder mempty
           DataNetworkRoute_DataConduit -> PathSegment "dataConduit" $ unitEncoder mempty
           DataNetworkRoute_DataCircuit -> PathSegment "dataCircuit" $ unitEncoder mempty
-      FrontendRoute_EventSource -> PathSegment "eventSource" $
+      FrontendRoute_EventLake -> PathSegment "eventSource" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
-          EventSourceRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
-          EventSourceRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
-          EventSourceRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
+          EventLakeRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
+          EventLakeRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
+          EventLakeRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
           
       FrontendRoute_DataSandbox -> PathSegment "dataSandbox" $
         pathComponentEncoder $ \case
@@ -160,7 +160,7 @@ concat <$> mapM deriveRouteComponent
   
   , ''FrontendRoute
   , ''DataNetworkRoute  
-  , ''EventSourceRoute
+  , ''EventLakeRoute
   , ''DataSandboxRoute
   , ''DataSourceRoute
   , ''StateContainerRoute
