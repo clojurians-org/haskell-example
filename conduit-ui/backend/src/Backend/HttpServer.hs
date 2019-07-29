@@ -29,9 +29,8 @@ serveHTTP :: Snap ()
 serveHTTP = serveSnap (Proxy::Proxy MyAPI) myAPI
 
 type MyAPI =
-  "api" :> (    "ping" :> Get '[PlainText] T.Text
-           :<|> "event" :> Capture "name" T.Text
-                        :> Post '[JSON] APIEventResponse)
+  "api" :> ("ping" :> Get '[PlainText] T.Text
+       :<|> "event" :> Capture "name" T.Text :> Post '[JSON] APIEventResponse)
 
 myAPI = pong :<|> event
   where pong :: Snap T.Text
@@ -42,6 +41,7 @@ myAPI = pong :<|> event
             (host, port, path) <- askWSInfo
             WS.runClient (cs host) port (cs path) $ \conn -> do
               (WS.sendTextData conn . J.encode . HttpEventInvokeRequest) name
+              _  {-- drop init --} <- WS.receiveData conn :: IO T.Text 
               WS.receiveData conn
               <* WS.sendClose conn ("Byte!" :: T.Text)
           return $ APIEventResponse wsRet 0
