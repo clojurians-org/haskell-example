@@ -14,7 +14,9 @@ import Common.Route
 import Obelisk.Backend
 
 import Fn
-import Common.WebSocketMessage 
+import Common.WebSocketMessage
+
+import Backend.HttpServer (serveHTTP)
 
 import GHC.Int (Int64)
 import Data.Maybe (isJust, fromJust)
@@ -35,9 +37,6 @@ import Data.Dependent.Sum (DSum (..))
 import Snap.Core (Snap, liftSnap)
 import qualified Network.WebSockets as WS
 import Network.WebSockets.Snap (runWebSocketsSnap)
-import Servant.Server (serveSnap)
-import Servant.API ((:>)(..), Get, PlainText)
-
 import qualified Language.Haskell.Interpreter as I
 import Data.Conduit (runConduit, yield, (.|))
 import qualified Data.Conduit.Combinators as C
@@ -62,24 +61,18 @@ import qualified Data.Aeson as J
 import Text.Regex.TDFA ((=~))
 
 import System.Random (randomRIO)
+import GHC.Int (Int64)
 
-
-eventGenerator :: TBMChan B.ByteString -> IO ()
-eventGenerator chan = do
-  threadDelay (1000 * 1000 * 5)
-  putStrLn "eventGenerator ..."    
-  forever $ do
-    putStrLn "forever ..."  
-    threadDelay (1000 * 1000 * 60)
-
-type MyAPI = "api" :> "ping" :> Get '[PlainText] String
-myAPI :: Snap String
-myAPI = return "pong\n"
+import GHC.Generics (Generic)
 
 wsHandle :: WSRequestMessage -> IO WSResponseMessage
 wsHandle = \case
   HaskellCodeRunRequest r ->
-    return . HaskellCodeRunResponse . mapLeft show =<< (I.runInterpreter . dynHaskell) r
+    return . HaskellCodeRunResponse . mapLeft show =<<
+      (I.runInterpreter . dynHaskell) r
+  HttpEventInvokeRequest name ->
+    return . HttpEventInvokeResponse . mapLeft show =<<
+      (I.runInterpreter . dynHaskell) "putStrLn \"hello world\""
   CronTimerCreateRequest (CronTimer name expr Nothing) -> do
     rid <- randomRIO (10, 100)
     return . CronTimerCreateResponse . Right $ CronTimer name expr (Just rid)
@@ -110,37 +103,15 @@ initAppST = do
   newMVar $ AppST
     [ CronTimer "larluo1" "*/5 * * *" (Just 1)
     , CronTimer "larluo2" "*/4 * * *" (Just 2)]
-{--  
-  let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
-  let sql = "select schedule, command, jobid from cron.job"
-  let parseCronName :: T.Text -> T.Text
-      parseCronName schedule = 
-        let (_,_,_, x:_)  :: (String, String, String, [String]) =
-              (cs schedule ::String) =~ ("pg_notify\\('.+', +'(.+)'\\)" ::String)
-        in cs x
-  Right connection <- H.acquire pgSettings
-  let mkRow = CronEventDef <$> fmap parseCronName (HD.column HD.text)
-                           <*> HD.column HD.text
-                           <*> HD.column HD.int8
-  Right cronEventSTs <- flip H.run connection $ H.statement () $ HS.Statement sql HE.unit (HD.rowList mkRow) True
-  newMVar (MkAppST (fmap ((,) <$> ce_name <*>  id) cronEventSTs) [])
---}
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend
   { _backend_run = \serve -> do
-      {-- void . keep  $ do
-      chan <- liftIO $ newTBMChanIO 1000
-      serverST <- liftIO $ initServerST
-      liftIO $ readMVar serverST >>= print
-      async (eventGenerator chan) <|> (liftIO $
-      --}
       appST <- liftIO $ initAppST
       serve $ do
         \case
           BackendRoute_Missing :=> _ -> return ()
-          BackendRoute_API :=> _ -> do
-            liftSnap $ serveSnap (Proxy::Proxy MyAPI) myAPI
+          BackendRoute_API :=> _ -> liftSnap serveHTTP
           BackendRoute_WSConduit :=> _ -> do
             runWebSocketsSnap (wsConduitApp appST)
   , _backend_routeEncoder = backendRouteEncoder

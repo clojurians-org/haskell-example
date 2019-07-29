@@ -33,8 +33,8 @@ data DataCircuitValue = DataCircuitValue {
     dataCircuitValue_enable :: Bool
   , dataCircuitValue_name :: T.Text
   , dataCircuitValue_desc :: T.Text
+  , dataCircuitValue_linkedDataCircuit :: (Int64, T.Text)  
   , dataCircuitValue_linkedDataSandbox :: LinkedDataSandbox  
-  , dataCircuitValue_linkedDataConduit :: (Int64, T.Text)
   } deriving (Generic, Show, Eq)
 instance J.ToJSON DataCircuitValue
 instance J.FromJSON DataCircuitValue
@@ -43,9 +43,7 @@ instance Default DataCircuitValue
 data DataCircuit = DataCircuit {
     dataCircuit_name :: T.Text
   , dataCircuit_desc :: T.Text
-  , dataCircuit_stateContainers :: [StateContainerHolder]
-  , dataCircuit_dataSources :: [DataSourceHolder]
-  , dataCircuit_dataServices :: [DataServiceHolder]
+  , dataCircuit_dataSandboxHolder :: DataSandboxHolder
   , dataCircuit_subDataCircuits :: [DataCircuit]
   , dataCircuit_dataConduits :: [DataConduit]
   , dataCircuit_partCombinator :: TR.Tree DataCircuitPart
@@ -77,6 +75,7 @@ instance Default DataCircuitPart where def = DataCircuitPart_RootBindNode
 instance ToHaskellCode (TR.Tree DataCircuitPart) where
   toHaskellCode (TR.Node DataCircuitPart_RootBindNode xs) = do
     undefined
+  toHaskellCode _ = undefined
   
 data DataConduit = DataConduit {
     dataConduit_name :: T.Text

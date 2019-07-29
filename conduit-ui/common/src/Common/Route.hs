@@ -37,6 +37,7 @@ deriving instance Show (BackendRoute a)
 
 data APIRoute :: * -> * where
   APIRoute_Ping :: APIRoute ()
+  APIRoute_Event :: APIRoute ()
 deriving instance Show (APIRoute a)
 
   -- You can define any routes that will be handled specially by the backend here.
@@ -105,6 +106,7 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       BackendRoute_API -> PathSegment "api" $
         maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
           APIRoute_Ping -> PathSegment "ping" $ unitEncoder mempty
+          APIRoute_Event -> PathSegment "event" $ unitEncoder mempty          
       BackendRoute_WSConduit -> PathSegment "wsConduit" $ unitEncoder mempty
     InR obeliskRoute -> obeliskRouteSegment obeliskRoute $ \case
       -- The encoder given to PathEnd determines how to parse query parameters,

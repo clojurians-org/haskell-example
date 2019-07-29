@@ -38,6 +38,7 @@ instance J.FromJSON AppST
 instance Default AppST
 
 data WSRequestMessage = HaskellCodeRunRequest T.Text
+                    | HttpEventInvokeRequest T.Text
                     -- CronTimer
                     | CronTimerCreateRequest CronTimer
                     | CronTimerReadRequest Int64
@@ -58,6 +59,7 @@ instance J.FromJSON WSRequestMessage
 
 data WSResponseMessage = WSInitResponse AppST
                      | HaskellCodeRunResponse (Either String ())
+                     | HttpEventInvokeResponse (Either String ())
                      -- CronTimer
                      | CronTimerCreateResponse (Either String CronTimer)
                      | CronTimerReadResponse (Either String CronTimer)

@@ -59,17 +59,19 @@ exampleCode = unlines [
         ]
 
 
-exampleDataConduitValues :: [DataCircuitValue]
-exampleDataConduitValues = do
-  [ def { dataCircuitValue_name = "华瑞银行数据下传平台"
-        , dataCircuitValue_desc = "运行SQL推送文件至下游系统" }
-    ]
 exampleEventPulses :: [EventPulse]
 exampleEventPulses = do
-  [ def { eventPulse_name = "数据库扫描事件源"
-        , eventPulse_desc = "通过定时扫描调度系统作业日志进行触发"
+  [ def { eventPulse_name = "EP_DWJobNotify"
+        , eventPulse_desc = "数仓作业通知"
         , eventPulse_dataConduitValues = [] }
     ]
+exampleDataConduitValues :: [DataCircuitValue]
+exampleDataConduitValues = do
+  [ def { dataCircuitValue_name = "DCV_HRFilePush"
+        , dataCircuitValue_desc = "华瑞银行数据下传平台"
+        , dataCircuitValue_linkedDataCircuit = (7, "文件下传平台")}
+    ]
+    
 dataNetwork_eventPulse_handle
   :: forall t m r.
      ( MonadHold t m, MonadFix m
@@ -157,12 +159,16 @@ theadSecondUI = do
     el "th"  $ text "启用"
     el "th"  $ text "名称"
     el "th"  $ text "描述"
-    el "th"  $ text "数据电路"
+    el "th"  $ text "数据电路"    
+    el "th"  $ text "状态容器"
+    el "th"  $ text "数据源"
+    el "th"  $ text "数据服务"
+
 
 tbodySecondUI
   :: forall t m .
      (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-   => Dynamic t [EventPulse] -> m ()
+   => Dynamic t [DataCircuitValue] -> m ()
 tbodySecondUI wsDyn = do
   el "tbody" $ do
     elClass "tr" "" $ do
@@ -173,17 +179,37 @@ tbodySecondUI wsDyn = do
       el "td" $ divClass "ui input" $ inputElement def
       el "td" $ divClass "ui input" $ inputElement def
       el "td" $ divClass "ui input" $ inputElement def
+      el "td" $ divClass "ui input" $ inputElement def
+      el "td" $ divClass "ui input" $ inputElement def
+      el "td" $ divClass "ui input" $ inputElement def      
 
   el "tbody" $ do
-    simpleList wsDyn $ \pulseDyn -> do
+    simpleList wsDyn $ \valueDyn -> do
       pb <- getPostBuild
       elDynAttr "tr" (constDyn M.empty) $ do
         deleteSelect <- el "td" $ divClass "ui fitted checkbox fields" $ do
           checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
           el "label" $ blank
         el "th"  $ divClass "ui fitted toggle checkbox" $ do
-          checkbox False (def & checkboxConfig_setValue .~ (tagPromptlyDyn (eventPulse_enable <$> pulseDyn) pb))
+          checkbox False (def & checkboxConfig_setValue .~ (tagPromptlyDyn (dataCircuitValue_enable <$> valueDyn) pb))
           el "label" blank
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated valueDyn <&> dataCircuitValue_name
+            , tag (current valueDyn <&> dataCircuitValue_name) pb ]
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated valueDyn <&> dataCircuitValue_desc
+            , tag (current valueDyn <&> dataCircuitValue_desc) pb ]
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
+          inputElement $ def & inputElementConfig_setValue .~ leftmost
+            [ updated valueDyn <&> snd . dataCircuitValue_linkedDataCircuit
+            , tag (current valueDyn <&> snd . dataCircuitValue_linkedDataCircuit) pb ]
+            
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ inputElement def
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ inputElement def
+        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ inputElement def        
+          
   return ()        
 
 dataNetwork_eventPulse
@@ -201,9 +227,34 @@ dataNetwork_eventPulse (wsEvt, wsDyn) = do
 
   divClass "ui segment basic" $ do
     elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI wsDyn
-    divClass "ui hidden divider" blank
-    elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI wsDyn
-    
+  divClass "ui hidden divider" blank
+  divClass "ui segment basic" $ do
+    elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI (constDyn exampleDataConduitValues)
+  divClass "ui hidden divider" blank
+  divClass "ui segment basic" $ do
+      divClass "ui top attached segment" $ do
+        elClass "h4" "ui header" $ text "代码浏览器"
+      divClass "ui attached segment" $ divClass "ui form" $ do
+        divClass "three fields" $ do
+          divClass "field" $ do
+            el "label" $ text "状态容器"
+            inputElement $ def
+          divClass "field" $ do
+            el "label" $ text "数据源"
+            inputElement $ def
+          divClass "field" $ do
+            el "label" $ text "数据服务"
+            inputElement $ def
+        divClass "field" $ do
+          el "label" $ text "函数服务"
+          textAreaElement $ def
+            & initialAttributes .~ ("rows" =: "20")
+            & textAreaElementConfig_initialValue .~ ""
+        divClass "field" $ do
+          elClass' "button" "ui button blue" (text "实时激活")
+        divClass "ui message" $ do
+--          divClass "header" $ text "运行结果"
+          text ""
   return never
 
 

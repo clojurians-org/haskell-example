@@ -11,6 +11,7 @@
 
 module Frontend where
 
+import Common.Api
 import Common.WebSocketMessage
 import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse_handle, dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
@@ -75,8 +76,8 @@ nav = do
     elClass "h4" "ui header" $ text "事件源"
     divClass "menu" $ do
       divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_CronTimer :/ ()) $ text "Cron定时器"      
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_HttpRequest :/ ()) $ text "HTTP请求"
-      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控"
+      divClass "item" $ routeLink (FrontendRoute_EventSource :/ EventSourceRoute_FileWatcher :/ ()) $ text "文件监控器"
+      divClass "item" $ text "SQL扫描器"
 
   divClass "item" $ do
     elClass "h4" "ui header" $ text "状态容器"
@@ -204,11 +205,8 @@ frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
   { _frontend_head = htmlHeader
   , _frontend_body = do
-      Just configRoute <- liftIO $ Cfg.get "config/common/route"
-      let hostPort = fromJust $  T.stripPrefix "https://" configRoute
-                             <|> T.stripPrefix "http://" configRoute
-                             <|> Just "localhost:8000"
-      let wsURL = "ws://" <> hostPort <> "/wsConduit"
+      (host, port, path) <- liftIO $ askWSInfo
+      let wsURL = "ws://" <> host <> ":" <> (cs . show) port <> path
 
       wsST <- liftIO mkWSStateContainer
       rec
@@ -219,7 +217,7 @@ frontend = Frontend
             elClass "h1" "ui header" $
               routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
-            divClass "ui two wide column vertical menu visible" $ nav
+            divClass "ui two wide column vertical menu visible compact" $ nav
             divClass "ui fourteen wide column container" $ page wsST wsResponseEvt
       return ()
   }

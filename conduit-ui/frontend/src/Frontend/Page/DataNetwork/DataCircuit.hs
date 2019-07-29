@@ -44,17 +44,20 @@ exampleDataCircuits =
         , dataCircuit_xid = Just 2 }
   , def { dataCircuit_name = "FilePushPlatform"
         , dataCircuit_desc = "文件下传平台"
-        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
-        , dataCircuit_dataServices = [ DataServiceHolder_FileService_MinIO ]
+        , dataCircuit_dataSandboxHolder = def
+            { dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ]
+            , dataSandboxHolder_dataServices = [ DataServiceHolder_FileService_MinIO ] }
         , dataCircuit_xid = Just 3 }
   , def { dataCircuit_name = "dataQueryPlatform"
         , dataCircuit_desc = "数据查询平台"
-        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
+        , dataCircuit_dataSandboxHolder = def
+            { dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ] }
         , dataCircuit_xid = Just 4}
   , def { dataCircuit_name = "ExternalDataPlatform"
         , dataCircuit_desc = "外部数据平台"
-        , dataCircuit_stateContainers = [ StateContainerHolder_PostgreSQL ]
-        , dataCircuit_dataSources = [ DataSourceHolder_SQLCursor ]
+        , dataCircuit_dataSandboxHolder = def
+            { dataSandboxHolder_stateContainers = [ StateContainerHolder_PostgreSQL ]
+            , dataSandboxHolder_dataSources = [ DataSourceHolder_SQLCursor ] }
         , dataCircuit_xid = Just 5 }
   , def { dataCircuit_name = "LogPullPlatform"
         , dataCircuit_desc = "日志抽取平台"
@@ -83,7 +86,9 @@ examplePartCombinator dataCircuit = do
   TR.Node def
     [ flip TR.Node [] $ DataCircuitPart_EmbededDataConduit $ def
         { dataConduit_name = ""
-        , dataConduit_dataSources = (dataCircuit_dataSources dataCircuit)
+        , dataConduit_dataSources =
+            dataCircuit & dataCircuit_dataSandboxHolder
+                        & dataSandboxHolder_dataSources
         , dataConduit_partCombinator =
             TR.Node def
               [ flip TR.Node [] $ DataConduitPart_EmbededLogicFragment $ def
@@ -171,16 +176,16 @@ tbodyUI wsDyn = do
             , tag (current conduitDyn <&> dataCircuit_desc) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataCircuit_stateContainers
-            , tag (current conduitDyn <&> cs . show . dataCircuit_stateContainers) pb ]
+            [ updated conduitDyn <&> cs . show . dataSandboxHolder_stateContainers . dataCircuit_dataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_stateContainers . dataCircuit_dataSandboxHolder) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataCircuit_dataSources
-            , tag (current conduitDyn <&> cs . show . dataCircuit_dataSources) pb ]
+            [ updated conduitDyn <&> cs . show . dataSandboxHolder_dataSources . dataCircuit_dataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_dataSources . dataCircuit_dataSandboxHolder) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataCircuit_dataServices
-            , tag (current conduitDyn <&> cs . show . dataCircuit_dataServices) pb ]            
+            [ updated conduitDyn <&> cs . show . dataSandboxHolder_dataServices . dataCircuit_dataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_dataServices . dataCircuit_dataSandboxHolder) pb ]            
         blank
   return ()
 

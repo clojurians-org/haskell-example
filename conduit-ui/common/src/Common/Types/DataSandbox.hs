@@ -37,6 +37,15 @@ instance J.ToJSON DataSandbox
 instance J.FromJSON DataSandbox
 instance Default DataSandbox
 
+data DataSandboxHolder = DataSandboxHolder {
+    dataSandboxHolder_stateContainers :: [StateContainerHolder]
+  , dataSandboxHolder_dataSources :: [DataSourceHolder]
+  , dataSandboxHolder_dataServices :: [DataServiceHolder]
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON DataSandboxHolder
+instance J.FromJSON DataSandboxHolder
+instance Default DataSandboxHolder
+
 data StateContainerHolder = StateContainerHolder_PostgreSQL
                           | StateContainerHolder_RocksDB
                           | StateContainerHolder_SQLLite
