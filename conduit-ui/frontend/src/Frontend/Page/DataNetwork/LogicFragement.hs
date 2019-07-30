@@ -27,12 +27,7 @@ dataNetwork_logicFragement_handle
   => MVar r -> Event t WSResponseMessage
   -> m (Event t WSResponseMessage)
 dataNetwork_logicFragement_handle wsST wsResponseEvt = do
-  let wsEvt = ffilter (isWSInitResponse
-                   ||| isSQLCursorCreateResponse
-                   ||| isSQLCursorUpdateResponse
-                   ||| isSQLCursorDeleteResponse
-                   ||| isSQLCursorDatabaseReadResponse
-                   ||| isSQLCursorTableReadResponse)
+  let wsEvt = ffilter (const True)
                 wsResponseEvt
   return wsEvt
 

@@ -27,12 +27,7 @@ dataSource_sqlCursor_handle
   => MVar r -> Event t WSResponseMessage
   -> m (Event t WSResponseMessage)
 dataSource_sqlCursor_handle wsST wsResponseEvt = do
-  let wsEvt = ffilter (isWSInitResponse
-                   ||| isSQLCursorCreateResponse
-                   ||| isSQLCursorUpdateResponse
-                   ||| isSQLCursorDeleteResponse
-                   ||| isSQLCursorDatabaseReadResponse
-                   ||| isSQLCursorTableReadResponse)
+  let wsEvt = ffilter (const True)
                 wsResponseEvt
   return wsEvt
 

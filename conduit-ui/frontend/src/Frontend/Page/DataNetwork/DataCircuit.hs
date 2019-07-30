@@ -98,24 +98,24 @@ tbodyUI wsDyn = do
           el "label" $ blank
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> dataCircuit_name
-            , tag (current conduitDyn <&> dataCircuit_name) pb ]
+            [ updated conduitDyn <&> dciName
+            , tag (current conduitDyn <&> dciName) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> dataCircuit_desc
-            , tag (current conduitDyn <&> dataCircuit_desc) pb ]
+            [ updated conduitDyn <&> dciDesc
+            , tag (current conduitDyn <&> dciDesc) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataSandboxHolder_stateContainers . dataCircuit_dataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_stateContainers . dataCircuit_dataSandboxHolder) pb ]
+            [ updated conduitDyn <&> cs . show . dsahStateContainers . dciDataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dsahStateContainers . dciDataSandboxHolder) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataSandboxHolder_dataSources . dataCircuit_dataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_dataSources . dataCircuit_dataSandboxHolder) pb ]
+            [ updated conduitDyn <&> cs . show . dsahDataSources . dciDataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dsahDataSources . dciDataSandboxHolder) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dataSandboxHolder_dataServices . dataCircuit_dataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dataSandboxHolder_dataServices . dataCircuit_dataSandboxHolder) pb ]            
+            [ updated conduitDyn <&> cs . show . dsahDataServices . dciDataSandboxHolder
+            , tag (current conduitDyn <&> cs . show . dsahDataServices . dciDataSandboxHolder) pb ]            
         blank
   return ()
 

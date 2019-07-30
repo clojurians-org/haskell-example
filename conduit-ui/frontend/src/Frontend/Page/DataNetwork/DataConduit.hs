@@ -27,13 +27,7 @@ dataNetwork_dataConduit_handle
   => MVar r -> Event t WSResponseMessage
   -> m (Event t WSResponseMessage)
 dataNetwork_dataConduit_handle wsST wsResponseEvt = do
-  let wsEvt = ffilter (isWSInitResponse
-                   ||| isSQLCursorCreateResponse
-                   ||| isSQLCursorUpdateResponse
-                   ||| isSQLCursorDeleteResponse
-                   ||| isSQLCursorDatabaseReadResponse
-                   ||| isSQLCursorTableReadResponse)
-                wsResponseEvt
+  let wsEvt = ffilter (const True) wsResponseEvt
   return wsEvt
 
 theadUI

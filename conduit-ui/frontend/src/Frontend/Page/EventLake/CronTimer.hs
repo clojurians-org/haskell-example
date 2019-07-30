@@ -6,13 +6,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 
-module Frontend.Page.EventSource.CronTimer
-  (eventSource_cronTimer_handle, eventSource_cronTimer) where
+module Frontend.Page.EventLake.CronTimer
+  (eventLake_cronTimer_handle, eventLake_cronTimer) where
 
 import Common.WebSocketMessage
+import Common.Types
 import Prelude
 
 import Reflex.Dom.Core
+import Data.Function (on)
 import Control.Monad (forM_, void, guard)
 
 import qualified Data.ByteString as B
@@ -49,38 +51,41 @@ fromCronTimerPayload :: CronTimerEventAndPayload a -> Maybe a
 fromCronTimerPayload (CronTimerPayload x) = Just x
 fromCronTimerPayload _  = Nothing
 
-eventSource_cronTimer_handle
+eventLake_cronTimer_handle
   :: forall t m r.
      ( MonadHold t m, MonadFix m
      , MonadIO m, MonadIO (Performable m), PerformEvent t m
-     , Has "eventSource_cronTimer" [CronTimer] r)
+     , Has "elCronTimers" [ELCronTimer] r)
   => MVar r -> Event t WSResponseMessage
-  -> m (Event t WSResponseMessage, Dynamic t [CronTimer])
-eventSource_cronTimer_handle wsST wsResponseEvt = do
-  let wsEvt = ffilter (isWSInitResponse ||| isCronTimerCreateResponse ||| isCronTimerUpdateResponse ||| isCronTimerDeleteResponse) wsResponseEvt
+  -> m (Event t WSResponseMessage, Dynamic t [ELCronTimer])
+eventLake_cronTimer_handle wsST wsResponseEvt = do
+  let wsEvt = ffilter (isWSInitResponse ||| isELCronTimerCRES ||| isELCronTimerURES ||| isELCronTimerDRES) wsResponseEvt
   myST <- liftIO $ readMVar wsST
   wsDyn <- foldDyn (\wsMsg xs -> case wsMsg of
-                       WSInitResponse (AppST cronTimers)  -> cronTimers ++ xs
-                       CronTimerCreateResponse (Right cronTimer) -> cronTimer : xs
-                       CronTimerUpdateResponse (Right cronTimer) -> cronTimer : filter (not . isSameCronXID cronTimer) xs
-                       CronTimerDeleteResponse (Right cronId) -> filter ((/= cronId) . fromJust . ce_xid) xs
+                       WSInitResponse appST  ->
+                         (map snd . gelCronTimer . appSTEventLake) appST ++ xs
+                       ELCronTimerCRES (Right cronTimer) -> cronTimer : xs
+                       ELCronTimerURES (Right cronTimer) ->
+                         cronTimer : filter (on (==) elctXid cronTimer) xs
+                       ELCronTimerDRES (Right cronId) ->
+                         filter ((/= cronId) . fromJust . elctXid) xs
                        _ -> xs)
-             (get #eventSource_cronTimer myST) wsEvt
+             (get #elCronTimers myST) wsEvt
   performEvent $ do
     ffor (updated wsDyn) $ \xs ->  do
-      liftIO $ modifyMVar_ wsST $ return . set #eventSource_cronTimer xs
+      liftIO $ modifyMVar_ wsST $ return . set #elCronTimers xs
       
-  return (wsEvt, (fmap (sortOn ce_name) wsDyn))
+  return (wsEvt, (fmap (sortOn elctName) wsDyn))
 
 keydownExclude :: (Reflex t, HasDomEvent t e 'KeydownTag, DomEventType e 'KeydownTag ~ Word) => Key -> e -> Event t ()
 keydownExclude key = fmapMaybe (\n -> guard $ keyCodeLookup (fromIntegral n) /= key) . domEvent Keydown
 
-eventSource_cronTimer
+eventLake_cronTimer
   :: forall t m.
      ( DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => (Event t WSResponseMessage, Dynamic t [CronTimer])
+  => (Event t WSResponseMessage, Dynamic t [ELCronTimer])
   -> m (Event t [WSRequestMessage])
-eventSource_cronTimer (wsEvt, wsDyn) = do
+eventLake_cronTimer (wsEvt, wsDyn) = do
   -- holdDyn "" (cs . show <$> wsEvt) >>= dynText  
   elClass "table" "ui collapsing table" $ do
     el "thead" $ el "tr" $ do
@@ -98,7 +103,7 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
             let cronExprEnterEvt = keypress Enter newCronExpr
             let cronNameEnterEvt = keypress Enter newCronName
             let mkCreateRequest =
-                  fmap CronTimerCreateRequest $ CronTimer
+                  fmap ELCronTimerCREQ $ ELCronTimer
                     <$> value newCronName
                     <*> value newCronExpr
                     <*> return Nothing
@@ -111,7 +116,7 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
             pb <- getPostBuild
             let cronEvt = updated cronDyn
             let cronBehavior = current cronDyn
-            elDynAttr "tr" (ffor cronDyn $ \(CronTimer _ _ xid) -> "id" =: (cs . show $ xid)) $ do
+            elDynAttr "tr" (ffor cronDyn $ \(ELCronTimer _ _ xid) -> "id" =: (cs . show $ xid)) $ do
               rec
                 let adjustCronExprNoEnterEvt = keydownExclude Enter updateCronExpr
                 let adjustCronNameNoEnterEvt = keydownExclude Enter updateCronName
@@ -126,27 +131,27 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
                                  [ ("bgcolor" =: "yellow") <$ adjustCronNameNoEnterEvt
                                  , M.empty <$ cronNameEnterEvt]
                 let mkUpdateRequest
-                      = fmap CronTimerUpdateRequest $ CronTimer
+                      = fmap ELCronTimerUREQ $ ELCronTimer
                                <$> value updateCronName
                                <*> value updateCronExpr
-                               <*> fmap ce_xid cronDyn
+                               <*> fmap elctXid cronDyn
 
                 let mkDeletePayload
                       =  (\case
                               True -> DeleteSelect 
                               False -> DeleteUnselect)
                            <$> value deleteSelect
-                           <*> fmap (fromJust . ce_xid) cronDyn
+                           <*> fmap (fromJust . elctXid) cronDyn
 
                 deleteSelect <- el "td" $ checkbox False (def & checkboxConfig_setValue .~ (False <$ wsEvt))
                 updateCronExpr <- elDynAttr "td" conrExprDyn $ inputElement $ def 
                   & inputElementConfig_setValue .~ leftmost
-                      [ fmap ce_expr cronEvt
-                      , tag (fmap ce_expr cronBehavior) pb]
+                      [ fmap elctExpr cronEvt
+                      , tag (fmap elctExpr cronBehavior) pb]
                 updateCronName <- elDynAttr "td" conrNameDyn $ inputElement $ def
                   & inputElementConfig_setValue .~ leftmost
-                      [ fmap ce_name cronEvt
-                      , tag (fmap ce_name cronBehavior)  pb]
+                      [ fmap elctName cronEvt
+                      , tag (fmap elctName cronBehavior)  pb]
 
                 -- dynText $ cs . show . fromJust . ce_xid <$> cronDyn
               return $ mergeList [ tagPromptlyDyn (CronTimerRequestEvent <$> mkUpdateRequest) cronExprEnterEvt
@@ -161,7 +166,7 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
             foldl' (\xs payload -> case payload of
                       CronTimerPayload (DeleteSelect x) -> x : filter (/= x) xs
                       CronTimerPayload (DeleteUnselect x) -> filter (/= x) xs
-                      CronTimerResponseEvent (CronTimerDeleteResponse _) -> []
+                      CronTimerResponseEvent (ELCronTimerDRES _) -> []
                       _ -> xs)
                    xs0 payloads
       deleteDyn <- foldDyn foldPayloads []
@@ -172,7 +177,7 @@ eventSource_cronTimer (wsEvt, wsDyn) = do
       deleteEvt' <- elAttr "th" ("colspan" =: "2") $ do
                          domEvent Click . fst <$> elClass' "button" "ui small button teal" (text "删除")
       -- dynText $ cs . show  <$> deleteDyn
-      return (tagPromptlyDyn (fmap CronTimerDeleteRequest <$> deleteDyn) deleteEvt')
+      return (tagPromptlyDyn (fmap ELCronTimerDREQ <$> deleteDyn) deleteEvt')
     return $ mergeWith (++) [ mapMaybe fromCronTimerEvent <$> cronTimerPayloadEvt
                             , deleteEvt ]
 

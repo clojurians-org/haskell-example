@@ -12,13 +12,15 @@
 module Frontend where
 
 import Common.Api
+import Common.Types
 import Common.WebSocketMessage
+
 import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse_handle, dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
-import Frontend.Page.EventLake.CronTimer (eventSource_cronTimer_handle, eventSource_cronTimer)
+import Frontend.Page.EventLake.CronTimer (eventLake_cronTimer_handle, eventLake_cronTimer)
 import Frontend.Page.DataSandbox.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
 
 import Prelude
@@ -137,7 +139,7 @@ page :: forall t js m r.
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
   , MonadIO m, MonadIO (Performable m)
-  , Has "eventSource_cronTimer" [CronTimer] r
+  , Has "elCronTimers" [ELCronTimer] r
   )
   => MVar r
   -> Event t WSResponseMessage
@@ -150,7 +152,7 @@ page wsST wsResponseEvt = do
   dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsST wsResponseEvt
   dataNetwork_dataCircuit_st <- dataNetwork_dataCircuit_handle wsST wsResponseEvt
   
-  eventSource_cronTimer_st <- eventSource_cronTimer_handle wsST wsResponseEvt
+  eventLake_cronTimer_st <- eventLake_cronTimer_handle wsST wsResponseEvt
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsST wsResponseEvt
 
   fmap switchDyn $ subRoute $ \case
@@ -162,8 +164,7 @@ page wsST wsResponseEvt = do
         DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
         DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit dataNetwork_dataCircuit_st
       FrontendRoute_EventLake -> fmap switchDyn $ subRoute $ \case
-        EventLakeRoute_HttpRequest -> text "my EventLakeRoute_HttpRequest" >> return never
-        EventLakeRoute_CronTimer -> eventSource_cronTimer eventSource_cronTimer_st 
+        EventLakeRoute_CronTimer -> eventLake_cronTimer eventLake_cronTimer_st
         EventLakeRoute_FileWatcher -> text "my EventLakeRoute_FileWatcher" >> return never
       FrontendRoute_DataSandbox -> fmap switchDyn $ subRoute $ \case
         DataSandboxRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
@@ -197,9 +198,9 @@ handleWSRequest wsURL wsRequests =
       def & webSocketConfig_send .~ ((fmap . fmap) J.encode wsRequests)
     return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
 
-mkWSStateContainer :: IO (MVar ("eventSource_cronTimer" := [CronTimer]))
+mkWSStateContainer :: IO (MVar ("elCronTimers" := [ELCronTimer]))
 mkWSStateContainer = newMVar
-  ( #eventSource_cronTimer := [] )
+  ( #elCronTimers := [] )
 
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend
