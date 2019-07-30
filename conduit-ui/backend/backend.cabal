@@ -24,6 +24,7 @@ library
     , labels
     , labels-json
     , transformers
+    , mtl
     , resourcet
     , conduit
     , hint

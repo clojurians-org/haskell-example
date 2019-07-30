@@ -63,7 +63,7 @@ eventLake_cronTimer_handle wsST wsResponseEvt = do
   myST <- liftIO $ readMVar wsST
   wsDyn <- foldDyn (\wsMsg xs -> case wsMsg of
                        WSInitResponse appST  ->
-                         (map snd . gelCronTimer . appSTEventLake) appST ++ xs
+                         [] ++ xs
                        ELCronTimerCRES (Right cronTimer) -> cronTimer : xs
                        ELCronTimerURES (Right cronTimer) ->
                          cronTimer : filter (on (==) elctXid cronTimer) xs

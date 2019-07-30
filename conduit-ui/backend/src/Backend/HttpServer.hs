@@ -28,15 +28,17 @@ import qualified Network.WebSockets as WS
 serveHTTP :: Snap ()
 serveHTTP = serveSnap (Proxy::Proxy MyAPI) myAPI
 
-type MyAPI =
-  "api" :> ("ping" :> Get '[PlainText] T.Text
-       :<|> "event" :> Capture "name" T.Text :> Post '[JSON] APIEventResponse)
+type MyAPI = "api" :> (
+            "ping" :> Get '[PlainText] T.Text
+       :<|> "event" :> Capture "name" T.Text :> Post '[JSON] APIEventResponse
+       :<|> "event" :> Capture "name" T.Text :> Get '[JSON] APIEventResponse
+         )
 
-myAPI = pong :<|> event
+myAPI = pong :<|> postEvent :<|> getEvent
   where pong :: Snap T.Text
         pong = return "pong\n"
-        event :: T.Text -> Snap APIEventResponse
-        event name = do
+        postEvent :: T.Text -> Snap APIEventResponse
+        postEvent name = do
           wsRet <- liftIO $ withSocketsDo $ do
             (host, port, path) <- askWSInfo
             WS.runClient (cs host) port (cs path) $ \conn -> do
@@ -45,6 +47,8 @@ myAPI = pong :<|> event
               WS.receiveData conn
               <* WS.sendClose conn ("Byte!" :: T.Text)
           return $ APIEventResponse wsRet 0
+        getEvent :: T.Text -> Snap APIEventResponse
+        getEvent name = postEvent name
 
 data APIEventRequest = APIEventRequest
   deriving (Generic, Show, Eq)

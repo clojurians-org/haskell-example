@@ -6,10 +6,7 @@ module Common.WebSocketMessage where
 
 import Prelude
 
-import Common.Types.DataNetwork
-import Common.Types.DataSandbox
-import Common.Types.EventLake
-
+import Common.Types
 import GHC.Int (Int64)
 
 import GHC.Generics (Generic)
@@ -21,14 +18,6 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
-data AppST = AppST {
-    appSTDataNetwork :: GlobalDataNetwork
-  , appSTDataSandbox :: GlobalDataSandbox
-  , appSTEventLake :: GlobalEventLake
-  } deriving (Generic, Show)
-instance J.ToJSON AppST
-instance J.FromJSON AppST
-instance Default AppST
 data WSRequestMessage = HaskellCodeRunRequest T.Text
                     -- EventPulse
                     | EventPulseCREQ EventPulse

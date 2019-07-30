@@ -12,6 +12,40 @@ import qualified Data.Tree as TR
 import Data.Default (def)
 
 import Data.Function ((&))
+import Control.Applicative (liftA2)
+import Labels ((:=)(..))
+import Data.Maybe (fromJust)
+import qualified Data.HashMap.Lazy as M
+
+exampleAppST :: AppST
+exampleAppST =
+  ( #dataNetwork := ( #eventPulses :=
+                        (M.fromList $ fmap (liftA2 (,) epName id) exampleEventPulses)
+                    , #dataCircuits :=
+                        (M.fromList $ fmap (liftA2 (,) (fromJust . dciXid) id) exampleDataCircuits)
+                    , #dataConduits := M.empty
+--                        fmap (liftA2 (,) (fromJust . dcoXid) id) exampleDataConduits
+                    , #logicFragments := M.empty )
+  , #dataSandbox := ( #stateContainers := M.empty
+                    , #dataSources := M.empty
+                    , #dataServices := M.empty )
+  , #eventLake := ( #cronTimers := M.empty
+                  , #fileWatchers := M.empty
+                  , #sqlScanners := M.empty )
+    )
+
+exampleEventPulses :: [EventPulse]
+exampleEventPulses = do
+  [ def { epName = "EP_DWJobNotify"
+        , epDesc = "数仓作业通知"
+        , epDataCircuitValues = exampleDataCircuitValues }
+    ]
+exampleDataCircuitValues :: [DataCircuitValue]
+exampleDataCircuitValues = do
+  [ def { dcivName = "DCV_HRFilePush"
+        , dcivDesc = "华瑞银行数据下传平台"
+        , dcivLinkedDataCircuit = (7, "文件下传平台")}
+    ]
 
 exampleDataCircuits :: [DataCircuit]
 exampleDataCircuits =
@@ -115,18 +149,5 @@ exampleCode = unlines [
         , "            .| C.take 2"
         , "            .| C.mapM_ (liftIO . print))"
           ]
-
-exampleEventPulses :: [EventPulse]
-exampleEventPulses = do
-  [ def { epName = "EP_DWJobNotify"
-        , epDesc = "数仓作业通知"
-        , epDataConduitValues = [] }
-    ]
-exampleDataConduitValues :: [DataCircuitValue]
-exampleDataConduitValues = do
-  [ def { dcivName = "DCV_HRFilePush"
-        , dcivDesc = "华瑞银行数据下传平台"
-        , dcivLinkedDataCircuit = (7, "文件下传平台")}
-    ]
 
               

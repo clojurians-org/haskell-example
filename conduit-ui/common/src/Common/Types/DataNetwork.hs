@@ -32,7 +32,7 @@ data EventPulse = EventPulse {
     epEnable :: Bool
   , epName :: T.Text
   , epDesc :: T.Text
-  , epDataConduitValues :: [DataCircuitValue]
+  , epDataCircuitValues :: [DataCircuitValue]
   } deriving (Generic, Show, Eq)
 instance J.ToJSON EventPulse
 instance J.FromJSON EventPulse
