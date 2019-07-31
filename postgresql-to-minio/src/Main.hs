@@ -13,8 +13,9 @@ import Control.Applicative ((<|>))
 
 import qualified Data.ByteString as B
 import Data.String.Conversions (cs)
-import Data.Conduit (ConduitT, (.|), runConduit, runConduitRes, yield)
+import Data.Conduit (ConduitT, (.|), runConduit, runConduitRes, yield, mergeSource)
 import qualified Data.Conduit.Combinators as C
+import qualified Data.Conduit.List as CL
 import Text.Heredoc (str)
 
 import qualified Data.Aeson as J (decode, eitherDecode, encode)
@@ -25,7 +26,6 @@ import qualified Hasql.Connection as H (Connection, Settings, settings, acquire,
 import qualified Hasql.Session as H (Session(..), QueryError, run, statement)
 import qualified Hasql.Statement as HS (Statement(..))
 import qualified Hasql.Encoders as HE (Params(..), unit)
--- import Hasql.Decoders (Row(..), singleRow, rowList, column, nullableColumn, int8, text)
 import qualified Hasql.Decoders as HD (Result(..), Row(..), unit, rowList, column, text)
 
 import Control.Monad.Trans.Resource (ResourceT, allocate, release, runResourceT)
@@ -37,7 +37,7 @@ import UnliftIO.Async (async)
 
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import qualified Network.Minio as M
-
+import qualified Network.Minio.S3API as M
 
 main :: IO ()
 main = undefined
@@ -135,10 +135,20 @@ repl = do
     lift dseSink
     chan <- lift dsoChan
     (sourceTBMChan chan)
-              .| C.concat
-              .| C.take 3
-              .| C.iterM (liftIO . print)
+              .| C.takeE 3
+              .| C.chunksOfE (2000 * 1000)
+              .| mergeSource (C.yieldMany [1..])
+              .| C.mapM (\(pn, v) ->
+                   M.putObjectPart "larluo" "postgresql.txt" 3 pn []
+                      (M.PayloadBS v))
               .| C.sinkList
               -- & \s -> M.putObject bucket "postgresql.txt" s Nothing M.defaultPutObjectOptions
   putStrLn "finished"
+
+test :: IO ()
+test = runConduitRes $
+  C.yieldMany ["aaaaaaaaaaaaa"::B.ByteString, "bbbbbbbbbbbb"]
+ .| C.chunksOfE 3
+ .| mergeSource (C.yieldMany [1::Int ..])
+ .| C.mapM_ (liftIO . putStrLn. show)
 
