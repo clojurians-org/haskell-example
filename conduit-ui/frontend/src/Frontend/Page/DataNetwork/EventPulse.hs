@@ -82,8 +82,8 @@ tbodyUI wsDyn = do
             , tag (current pulseDyn <&> epDesc) pb ]
         elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
           inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated pulseDyn <&> (cs . show . epDataConduitValues)
-            , tag (current pulseDyn <&> (cs . show . epDataConduitValues)) pb ]
+            [ updated pulseDyn <&> (cs . show . epDataCircuitValues)
+            , tag (current pulseDyn <&> (cs . show . epDataCircuitValues)) pb ]
       
   return ()
       -- dataService
@@ -182,7 +182,7 @@ dataNetwork_eventPulse (wsEvt, wsDyn) = do
     elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI wsDyn
   divClass "ui hidden divider" blank
   divClass "ui segment basic" $ do
-    elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI (constDyn exampleDataConduitValues)
+    elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI (constDyn exampleDataCircuitValues)
   divClass "ui hidden divider" blank
   divClass "ui segment basic" $ do
       divClass "ui top attached segment" $ do

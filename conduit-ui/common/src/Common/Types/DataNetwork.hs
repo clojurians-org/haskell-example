@@ -19,6 +19,7 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
+{--
 data GlobalDataNetwork = GlobalDataNetwork {
     gdnEventPulses :: [(T.Text, EventPulse)]
   , gdnDataCircuits :: [(Int64, DataCircuit)]
@@ -28,6 +29,7 @@ data GlobalDataNetwork = GlobalDataNetwork {
 instance J.ToJSON GlobalDataNetwork
 instance J.FromJSON GlobalDataNetwork
 instance Default GlobalDataNetwork
+--}
 data EventPulse = EventPulse {
     epEnable :: Bool
   , epName :: T.Text
@@ -38,6 +40,19 @@ instance J.ToJSON EventPulse
 instance J.FromJSON EventPulse
 instance Default EventPulse
 
+exampleHaskellCodeBuilderTest :: HaskellCodeBuilder
+exampleHaskellCodeBuilderTest = HaskellCodeBuilder
+  { hcbCombinators = TR.Node ">>" [ TR.Node "f" []
+                                  , TR.Node "<|>"
+                                      [ TR.Node "g" []
+                                      , TR.Node "h" []]]
+  , hcbFns = [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
+             , ("g", "  putStrLn \"what's wrong\"")
+             , ("h", "  putStrLn \"hi hi hi\"") ] }
+
+instance ToHaskellCodeBuilder EventPulse where
+  toHaskellCodeBuilder ep = exampleHaskellCodeBuilderTest
+  
 data DataCircuitValue = DataCircuitValue {
     dcivEnable :: Bool
   , dcivName :: T.Text
@@ -64,8 +79,10 @@ data DataCircuit = DataCircuit {
 instance J.ToJSON DataCircuit
 instance J.FromJSON DataCircuit
 instance Default DataCircuit
+{--
 instance ToHaskellCode DataCircuit where
   toHaskellCode dataCircuit = toHaskellCode (dciPartCombinator dataCircuit)
+--}
 
 data DataCircuitPart = DCIP_RootBindNode
                      | DCIP_RootAlternativeNode
@@ -81,10 +98,12 @@ instance J.ToJSON DataCircuitPart
 instance J.FromJSON DataCircuitPart
 instance Default DataCircuitPart where def = DCIP_RootBindNode
 
+{--
 instance ToHaskellCode (TR.Tree DataCircuitPart) where
   toHaskellCode (TR.Node DCIP_RootBindNode xs) = do
     undefined
   toHaskellCode _ = undefined
+--}
   
 data DataConduit = DataConduit {
     dcoName :: T.Text

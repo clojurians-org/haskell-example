@@ -58,6 +58,14 @@ project ./. ({ pkgs, hackGet, ... }: {
         sha256 = "0apkyjlpfrff3kyrz3qrg6a7k4wpdd2731yfc8i83mm9hi1bm967" ;} )
       {}))) ;
 
+    minio-hs = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "minio-hs"
+      (pkgs.fetchFromGitHub {
+        owner = "minio" ;
+        repo = "minio-hs" ;
+        rev = "1e6579b02b2992ed74f4df5fa5d24f90ec3a63d5" ;
+        sha256 = "1fs055hj46mjvmq1jfs48skclxfv431mnihjaqnmd2qvja23yvmk" ;
+      }) {})) ;
+
     # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;
 })

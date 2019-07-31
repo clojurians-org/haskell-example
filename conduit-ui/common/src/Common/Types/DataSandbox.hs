@@ -17,6 +17,8 @@ import Data.Default (Default(def))
 
 import Control.Applicative (liftA2)
 import Control.Lens ()
+import Text.Heredoc (str)
+import Data.String.Conversions (cs)
 
 data GlobalDataSandbox = GlobalDataSandbox {
     gdsaStateContainers :: [(Int64, StateContainer)]
@@ -123,6 +125,37 @@ instance J.ToJSON DSOSQLCursor
 instance J.FromJSON DSOSQLCursor
 instance Default DSOSQLCursor
 
+instance ToHaskellCodeBuilder DSOSQLCursor where
+  toHaskellCodeBuilder dsoSQLCusor = HaskellCodeBuilder
+    { hcbCombinators = TR.Node "dsoSQLCursorChan" []
+    , hcbFns = [("dsoSQLCursorChan", (cs . unlines)
+        [ "  let"
+        , "    sql = [str|select"
+        , "                |  id, name, description, 'type'"
+        , "                |, state, timeliness, params, result_plugin_type"
+        , "                |, vendor_id, server_id, success_code"
+        , "                |from tb_interface"
+        , "                |] :: B.ByteString"
+        , "    pgSettings = H.settings \"10.132.37.200\" 5432 \"monitor\" \"monitor\" \"monitor\""
+        , "    (curName, cursorSize, chanSize) = (\"larluo\", 200, 1000)"
+        , "    textColumn = HD.column HD.text"
+        , "    mkRow = (,,,,,,,,,,)"
+        , "                <$> fmap (#id :=) textColumn"
+        , "                <*> fmap (#name :=) textColumn"
+        , "                <*> fmap (#description :=) textColumn"
+        , "                <*> fmap (#type :=) textColumn"
+        , "                <*> fmap (#state :=) textColumn"
+        , "                <*> fmap (#timeliness :=) textColumn"
+        , "                <*> fmap (#params :=) textColumn"
+        , "                <*> fmap (#result_plugin_type :=) textColumn"
+        , "                <*> fmap (#vendor_id :=) textColumn"
+        , "                <*> fmap (#server_id :=) textColumn"
+        , "                <*> fmap (#success_code :=) textColumn"
+        , "  Right connection <- liftIO $ H.acquire pgSettings"
+        , "  pgToChan connection sql curName cursorSize chanSize mkRow"
+          ] )]
+      }
+      
 data DSOMinIO = DSOMinIO
   { dsoMinioName :: T.Text
   , dsoMinioXid :: Maybe Int64 }

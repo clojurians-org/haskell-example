@@ -1,12 +1,17 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuasiQuotes #-}
 
-module Backend.WebSocketServer (serveWebSocket) where
+--module Backend.WebSocketServer (serveWebSocket) where
+module Backend.WebSocketServer where
 
+import Common.Class
 import Common.Types
 import Common.WebSocketMessage
+import Common.ExampleData
 import Prelude
+import Text.Heredoc (str)
 
 import Control.Monad (forever, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -29,6 +34,7 @@ import Snap.Core (MonadSnap)
 import Network.WebSockets.Snap (runWebSocketsSnap)
 
 import Control.Lens ((^.), (.~), view, over, at)
+import Control.Applicative ((<|>))
 import Labels (lens)
 
 import Control.Monad.Trans.Except (runExceptT, ExceptT(..), except)
@@ -73,7 +79,6 @@ wsHandle appST = \case
     return . WSResponseUnknown $ unknown
 --}
 
-instance IsString I.InterpreterError where fromString = show
 wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage    
 wsHandle appST (HaskellCodeRunRequest r) =
   return . HaskellCodeRunResponse . mapLeft show =<<
@@ -82,13 +87,11 @@ wsHandle appST (HaskellCodeRunRequest r) =
 wsHandle appST (EventPulseAREQ name) = do
   let getter = lens #dataNetwork . lens #eventPulses . at name
   eventPulseMaybe <- view getter <$> readMVar appST
---  let notFound = maybeToRight "EventPulse_Not_Found" eventPulses
---  evalResult' <- I.runInterpreter . dynHaskell . (cs . show) $ either
   evalResult <- runExceptT $ do
     eventPulse <- ExceptT $ return (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
-    ExceptT $ (I.runInterpreter . dynHaskell . (cs . show)) eventPulse
---  (return . EventPulseARES . mapLeft show) evalResult
-  undefined
+    liftIO $ putStrLn . cs $ toHaskellCode exampleHaskellCodeBuilder
+    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder) eventPulse
+  (return . EventPulseARES . mapLeft show) evalResult
   
 wsHandle appST unknown = do
   putStrLn $ "CronTimerDeleteResponse: " ++ (show unknown)
@@ -103,3 +106,4 @@ dynHaskell stmt = do
                                    , I.TemplateHaskell
                                    , I.QuasiQuotes]]
   I.runStmt (cs stmt)
+

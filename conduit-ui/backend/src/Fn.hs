@@ -9,13 +9,14 @@ import Prelude
 import GHC.Word (Word16)
 -- import Data.Either.Combinators (fromRight')
 import Data.Either.Combinators (fromRight, isLeft, fromRight')
-import Control.Monad (when, forM_, mapM_)
+import Control.Monad (when, forM_, mapM_, void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
+import Control.Applicative ((<|>))
 
 import qualified Data.ByteString as B
 import Data.String.Conversions (cs)
-import Data.Conduit (ConduitT, (.|), runConduit, yield)
+import Data.Conduit (ConduitT, (.|), runConduit, runConduitRes, yield)
 import qualified Data.Conduit.Combinators as C
 import Text.Heredoc (str)
 
@@ -37,6 +38,8 @@ import Data.Conduit.TMChan (sourceTBMChan, sinkTBMChan)
 import UnliftIO.STM (atomically)
 import UnliftIO.Async (async)
 
+import Control.Monad.Trans.Class (MonadTrans (lift))
+import qualified Network.Minio as M
 
 unitSession :: B.ByteString -> H.Session ()
 unitSession sql = H.statement () $ HS.Statement sql HE.unit HD.unit True
@@ -80,48 +83,51 @@ pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
         release reg
   return chan
 
+
+
 query :: IO [B.ByteString]
 query = do
-  let sql = [str|select
-                |  id, name, description, 'type'
-                |, state, timeliness, params, result_plugin_type
-                |, vendor_id, server_id, success_code
-                |from tb_interface
-                |] :: B.ByteString
-
-  let pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
-  let (curName, cursorSize, chanSize) = ("larluo", 200, 1000)
-
-  let textColumn = HD.column HD.text
-  let mkRow = (,,,,,,,,,,)
-                <$> fmap (#id :=) textColumn
-                <*> fmap (#name :=) textColumn
-                <*> fmap (#description :=) textColumn
-                <*> fmap (#type :=) textColumn
-                <*> fmap (#state :=) textColumn
-                <*> fmap (#timeliness :=) textColumn
-                <*> fmap (#params :=) textColumn
-                <*> fmap (#result_plugin_type :=) textColumn
-                <*> fmap (#vendor_id :=) textColumn
-                <*> fmap (#server_id :=) textColumn
-                <*> fmap (#success_code :=) textColumn
-                      
-  Right connection <- liftIO $ H.acquire pgSettings
-  runResourceT $ do
-    chan <- pgToChan connection sql curName cursorSize chanSize mkRow
-
-  -- gbkConv <- liftIO $  ICU.open "gbk" Nothing
-  -- utf8Conv <- liftIO $  ICU.open "utf-8" Nothing
-
-    runConduit $ 
-      (sourceTBMChan chan
+  let
+    dsoChan = do
+      let
+        sql = [str|select
+                    |  id, name, description, 'type'
+                    |, state, timeliness, params, result_plugin_type
+                    |, vendor_id, server_id, success_code
+                    |from tb_interface
+                    |] :: B.ByteString
+        
+        pgSettings = H.settings "10.132.37.200" 5432 "monitor" "monitor" "monitor"
+        (curName, cursorSize, chanSize) = ("larluo", 200, 1000)
+        
+        textColumn = HD.column HD.text
+        mkRow = (,,,,,,,,,,)
+                    <$> fmap (#id :=) textColumn
+                    <*> fmap (#name :=) textColumn
+                    <*> fmap (#description :=) textColumn
+                    <*> fmap (#type :=) textColumn
+                    <*> fmap (#state :=) textColumn
+                    <*> fmap (#timeliness :=) textColumn
+                    <*> fmap (#params :=) textColumn
+                    <*> fmap (#result_plugin_type :=) textColumn
+                    <*> fmap (#vendor_id :=) textColumn
+                    <*> fmap (#server_id :=) textColumn
+                    <*> fmap (#success_code :=) textColumn
+                          
+      Right connection <- liftIO $ H.acquire pgSettings
+      pgToChan connection sql curName cursorSize chanSize mkRow
+    dseSink = do
+      bExist <- M.bucketExists "larluo"
+      when (not bExist) $ void $ M.makeBucket "larluo" Nothing
+  runConduitRes $ do
+      (lift dsoChan >>= sourceTBMChan)
               .| C.concat
               .| C.take 2
 --              .| C.map ( -- ICU.fromUnicode gbkConv . ICU.toUnicode gbkConv .
 --                         cs . J.encode)
 --              .| C.iterM (liftIO . print)
 --              .| C.map (flip B.append "\n"))
-              .| C.map (cs . show) .| C.sinkList)
+              .| C.map (cs . show) .| C.sinkList
 
 repl = do
   recs <- query

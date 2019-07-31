@@ -9,6 +9,7 @@
 
 module Backend where
 
+import Fn
 import Prelude
 import Common.Route
 import Obelisk.Backend

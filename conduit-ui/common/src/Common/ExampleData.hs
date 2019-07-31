@@ -3,6 +3,7 @@
 
 module Common.ExampleData where
 
+import Common.Class
 import Common.Types
 import Prelude
 
@@ -151,3 +152,12 @@ exampleCode = unlines [
           ]
 
               
+exampleHaskellCodeBuilder :: HaskellCodeBuilder
+exampleHaskellCodeBuilder = HaskellCodeBuilder
+  { hcbCombinators = TR.Node ">>" [ TR.Node "f" []
+                                  , TR.Node "<|>"
+                                      [ TR.Node "g" []
+                                      , TR.Node "h" []]]
+  , hcbFns = [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
+             , ("g", "  putStrLn \"what's wrong\"")
+             , ("h", "  putStrLn \"hi hi hi\"") ] }
