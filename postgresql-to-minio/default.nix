@@ -4,15 +4,14 @@ with pkgs;
 let
   haskellPackages = pkgs.haskellPackages.override {
     overrides = self: super: with pkgs.haskell.lib; {
-      # tasty = dontCheck (doJailbreak super.tasty) ;
-      # minio-hs = dontCheck (doJailbreak (self.callCabal2nix "minio-hs"
-      #   (pkgs.fetchFromGitHub {
-      #     owner = "minio" ;
-      #     repo = "minio-hs" ;
-      #     rev = "v1.3.1" ;
-      #     sha256 = "0714dg4fqdqcf0w2a4wcp45xz1jbv04qmpgcgdr498wpks7kkjpm" ;
-      #   }) {})) ;
-      minio-hs = dontCheck (doJailbreak (self.callCabal2nix "minio-hs" ./minio-hs {})) ;
+      minio-hs = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "minio-hs"
+        (pkgs.fetchFromGitHub {
+          owner = "minio" ;
+          repo = "minio-hs" ;
+          rev = "1e6579b02b2992ed74f4df5fa5d24f90ec3a63d5" ;
+          sha256 = "1fs055hj46mjvmq1jfs48skclxfv431mnihjaqnmd2qvja23yvmk" ;
+      }) {})) ;
+
       labels-json = dontCheck (doJailbreak (self.callCabal2nix "labels-json"
         (pkgs.fetchFromGitHub {
           owner = "chrisdone" ;
