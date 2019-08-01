@@ -117,38 +117,34 @@ repl = do
       pgToChan connection sql curName cursorSize chanSize mkRow
     dseSink = do
       let
-        (ci', accessKey, secretKey, bucket)
-          = ( "http://10.129.35.175:9000"
-            , "BY2BFHISRTPNY36IR4TD"
-            , "ZB66/2jxW0bXkiEU0kufFT0ni1tOut9QJG8v1hb7"
-            , "larluo")            
+        (ci', accessKey, secretKey, bucket, filepath)
+          = ( "http://10.132.37.200:9000"
+            , "XF90I4NV5E1ZC2ROPVVR"
+            , "6IxTLFeA2g+pPuXu2J8BMvEUgywN6kr5Uckdf1O4"
+            , "larluo"
+            , "postgresql.txt")
         ci = ci' & M.setCreds (M.Credentials accessKey secretKey)
                  & M.setRegion "us-east-1"
 
-      M.runMinioRes ci $ do
-        bExist <- M.bucketExists "larluo"
-        when (not bExist) $ void $ M.makeBucket "larluo" Nothing
-                  
+      Right uid <- lift . M.runMinioRes ci $ do
+        bExist <- M.bucketExists bucket
+        when (not bExist) $ void $ M.makeBucket bucket Nothing
+        let a = M.putObjectPart
+        M.newMultipartUpload bucket filepath  []
 
-        
+      C.chunksOfE (2000 * 1000)
+        .| mergeSource (C.yieldMany [1..])
+        .| C.mapM  (\(pn, v) -> M.runMinioRes ci $ M.putObjectPart bucket filepath uid pn [] (M.PayloadBS v))
+        .| (C.sinkList >>= yield . fromRight' . sequence)
+        .| C.mapM (M.runMinioRes ci . M.completeMultipartUpload bucket filepath uid)
+
   runConduitRes $ do
-    lift dseSink
     chan <- lift dsoChan
     (sourceTBMChan chan)
-              .| C.takeE 3
-              .| C.chunksOfE (2000 * 1000)
-              .| mergeSource (C.yieldMany [1..])
-              .| C.mapM (\(pn, v) ->
-                   M.putObjectPart "larluo" "postgresql.txt" 3 pn []
-                      (M.PayloadBS v))
+              .| C.concat
+              .| C.take 3
+              .| C.map ((<> "\n") .cs . J.encode)
+              .| dseSink
               .| C.sinkList
-              -- & \s -> M.putObject bucket "postgresql.txt" s Nothing M.defaultPutObjectOptions
   putStrLn "finished"
-
-test :: IO ()
-test = runConduitRes $
-  C.yieldMany ["aaaaaaaaaaaaa"::B.ByteString, "bbbbbbbbbbbb"]
- .| C.chunksOfE 3
- .| mergeSource (C.yieldMany [1::Int ..])
- .| C.mapM_ (liftIO . putStrLn. show)
 
