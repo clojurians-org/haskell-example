@@ -13,7 +13,7 @@ import Labels.JSON ()
 import qualified Data.HashMap.Lazy as M
 import GHC.Int (Int64)
 
-type AppST =
+type FaaSInfo  =
   ( "dataNetwork" := ( "eventPulses" := M.HashMap T.Text X.EventPulse
                      , "dataCircuits" := M.HashMap Int64 X.DataCircuit
                      , "dataConduits" := M.HashMap Int64 X.DataConduit
@@ -25,4 +25,5 @@ type AppST =
                    , "fileWatchers" := M.HashMap Int64 X.ELFileWatcher
                    , "sqlScanners" := M.HashMap Int64 X.ELSQLScanner )
     )
+type AppST = FaaSInfo
   

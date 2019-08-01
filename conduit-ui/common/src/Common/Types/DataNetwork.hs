@@ -4,7 +4,7 @@
 
 module Common.Types.DataNetwork where
 
-import Common.Class
+import Common.Types.Base
 import Common.Types.DataSandbox
 import Prelude
 
@@ -19,7 +19,6 @@ import Data.Default (Default(def))
 
 import Control.Applicative (liftA2)
 import Control.Lens ()
-import Data.List (foldl')
 
 
 data EventPulse = EventPulse {
@@ -32,43 +31,16 @@ instance J.ToJSON EventPulse
 instance J.FromJSON EventPulse
 instance Default EventPulse
 
-exampleHaskellCodeBuilderTest :: HaskellCodeBuilder
-exampleHaskellCodeBuilderTest = HaskellCodeBuilder
-  { hcbCombinators = TR.Node ">>" [ TR.Node "f" []
-                                  , TR.Node "<|>"
-                                      [ TR.Node "g" []
-                                      , TR.Node "h" []]]
-  , hcbFns = M.fromList
-             [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
-             , ("g", "  putStrLn \"what's wrong\"")
-             , ("h", "  putStrLn \"hi hi hi\"") ] }
-
-instance ToHaskellCodeBuilder EventPulse where
-  toHaskellCodeBuilder ep =  do
-    let dcivs = (epDataCircuitValues ep)
-        hcbCombinators' = do --flip map dataCircuitsValues $ \(DataCircuitValue True name desc ldci ldsa) ->
-          -- TR.Node "<|>"
-          let label = "keep $ (" <> T.replicate (length dcivs) "," <> ")"
-                         <> " <$> " <> T.intercalate " <*> " (fmap (("async " <>) . dcivName) dcivs)
-          TR.Node label []
-        hcbFns' = (M.unions . fmap (hcbFns . toHaskellCodeBuilder)) dcivs
-    HaskellCodeBuilder {hcbCombinators = hcbCombinators', hcbFns = hcbFns'}
-  
 data DataCircuitValue = DataCircuitValue {
     dcivEnable :: Bool
   , dcivName :: T.Text
   , dcivDesc :: T.Text
   , dcivLinkedDataCircuit :: (Int64, T.Text)  
-  , dcivLnkedDataSandbox :: LinkedDataSandbox  
+  , dcivLinkedDataSandbox :: LinkedDataSandbox  
   } deriving (Generic, Show, Eq)
 instance J.ToJSON DataCircuitValue
 instance J.FromJSON DataCircuitValue
 instance Default DataCircuitValue
-instance ToHaskellCodeBuilder DataCircuitValue where
-  toHaskellCodeBuilder dci = HaskellCodeBuilder
-    { hcbCombinators = undefined
-    , hcbFns = undefined
-    }
 
 data DataCircuit = DataCircuit {
     dciName :: T.Text
@@ -85,10 +57,6 @@ data DataCircuit = DataCircuit {
 instance J.ToJSON DataCircuit
 instance J.FromJSON DataCircuit
 instance Default DataCircuit
-{--
-instance ToHaskellCode DataCircuit where
-  toHaskellCode dataCircuit = toHaskellCode (dciPartCombinator dataCircuit)
---}
 
 data DataCircuitPart = DCIP_RootBindNode
                      | DCIP_RootAlternativeNode
@@ -104,13 +72,6 @@ instance J.ToJSON DataCircuitPart
 instance J.FromJSON DataCircuitPart
 instance Default DataCircuitPart where def = DCIP_RootBindNode
 
-{--
-instance ToHaskellCode (TR.Tree DataCircuitPart) where
-  toHaskellCode (TR.Node DCIP_RootBindNode xs) = do
-    undefined
-  toHaskellCode _ = undefined
---}
-  
 data DataConduit = DataConduit {
     dcoName :: T.Text
   , dcoDesc :: T.Text

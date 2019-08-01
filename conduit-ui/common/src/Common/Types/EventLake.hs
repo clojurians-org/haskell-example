@@ -4,7 +4,7 @@
 
 module Common.Types.EventLake where
 
-import Common.Class
+import Common.Types.Base
 import Prelude
 
 import GHC.Int (Int64)
