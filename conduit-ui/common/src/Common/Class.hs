@@ -23,7 +23,7 @@ instance Default T.Text where def = T.empty
 
 data HaskellCodeBuilder = HaskellCodeBuilder {
     hcbCombinators :: TR.Tree T.Text
-  , hcbFns :: [(T.Text, T.Text)]
+  , hcbFns :: M.HashMap T.Text T.Text
   } deriving (Generic, Show)
 
 class ToHaskellCodeBuilder a where
@@ -32,7 +32,7 @@ class ToHaskellCodeBuilder a where
 toHaskellCode :: HaskellCodeBuilder -> T.Text
 toHaskellCode (HaskellCodeBuilder combinators fns) =
   "do\n  let\n"
-       <> (T.unlines . map ("    " <> ) . T.lines .  T.unlines) (map mkFn fns)
+       <> (T.unlines . map ("    " <> ) . T.lines .  T.unlines) (map mkFn (M.toList fns))
        <> "  " <> combinatorsCode 
   where
     combinatorsCode = 

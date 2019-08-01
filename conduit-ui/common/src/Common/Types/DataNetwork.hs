@@ -14,22 +14,14 @@ import GHC.Generics (Generic)
 import qualified Data.Aeson as J
 import qualified Data.Text as T
 import qualified Data.Tree as TR
+import qualified Data.HashMap.Lazy as M
 import Data.Default (Default(def))
 
 import Control.Applicative (liftA2)
 import Control.Lens ()
+import Data.List (foldl')
 
-{--
-data GlobalDataNetwork = GlobalDataNetwork {
-    gdnEventPulses :: [(T.Text, EventPulse)]
-  , gdnDataCircuits :: [(Int64, DataCircuit)]
-  , gdnDataConduits :: [(Int64, DataConduit)]
-  , gdnLogicFragments :: [(Int64, LogicFragment)]
-  } deriving (Generic, Show, Eq)
-instance J.ToJSON GlobalDataNetwork
-instance J.FromJSON GlobalDataNetwork
-instance Default GlobalDataNetwork
---}
+
 data EventPulse = EventPulse {
     epEnable :: Bool
   , epName :: T.Text
@@ -46,12 +38,21 @@ exampleHaskellCodeBuilderTest = HaskellCodeBuilder
                                   , TR.Node "<|>"
                                       [ TR.Node "g" []
                                       , TR.Node "h" []]]
-  , hcbFns = [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
+  , hcbFns = M.fromList
+             [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
              , ("g", "  putStrLn \"what's wrong\"")
              , ("h", "  putStrLn \"hi hi hi\"") ] }
 
 instance ToHaskellCodeBuilder EventPulse where
-  toHaskellCodeBuilder ep = exampleHaskellCodeBuilderTest
+  toHaskellCodeBuilder ep =  do
+    let dcivs = (epDataCircuitValues ep)
+        hcbCombinators' = do --flip map dataCircuitsValues $ \(DataCircuitValue True name desc ldci ldsa) ->
+          -- TR.Node "<|>"
+          let label = "keep $ (" <> T.replicate (length dcivs) "," <> ")"
+                         <> " <$> " <> T.intercalate " <*> " (fmap (("async " <>) . dcivName) dcivs)
+          TR.Node label []
+        hcbFns' = (M.unions . fmap (hcbFns . toHaskellCodeBuilder)) dcivs
+    HaskellCodeBuilder {hcbCombinators = hcbCombinators', hcbFns = hcbFns'}
   
 data DataCircuitValue = DataCircuitValue {
     dcivEnable :: Bool
@@ -63,6 +64,11 @@ data DataCircuitValue = DataCircuitValue {
 instance J.ToJSON DataCircuitValue
 instance J.FromJSON DataCircuitValue
 instance Default DataCircuitValue
+instance ToHaskellCodeBuilder DataCircuitValue where
+  toHaskellCodeBuilder dci = HaskellCodeBuilder
+    { hcbCombinators = undefined
+    , hcbFns = undefined
+    }
 
 data DataCircuit = DataCircuit {
     dciName :: T.Text

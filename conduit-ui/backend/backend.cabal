@@ -39,6 +39,7 @@ library
     , websockets-snap
     , transient
     , regex-tdfa
+    , minio-hs
 
   exposed-modules:
     Backend

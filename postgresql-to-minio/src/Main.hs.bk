@@ -1,12 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
-module Fn where
+module Main where
 
 import Prelude
 import GHC.Word (Word16)
+import Data.Function ((&))
 -- import Data.Either.Combinators (fromRight')
 import Data.Either.Combinators (fromRight, isLeft, fromRight')
 import Control.Monad (when, forM_, mapM_, void)
@@ -16,31 +17,40 @@ import Control.Applicative ((<|>))
 
 import qualified Data.ByteString as B
 import Data.String.Conversions (cs)
-import Data.Conduit (ConduitT, (.|), runConduit, runConduitRes, yield)
+import Data.Conduit (ConduitT, (.|), runConduit, runConduitRes, yield, mergeSource)
 import qualified Data.Conduit.Combinators as C
+import qualified Data.Conduit.List as CL
 import Text.Heredoc (str)
+import qualified Data.Text as T
 
 import qualified Data.Aeson as J (decode, eitherDecode, encode)
 import Labels ((:=)(..))
+import qualified Labels as L
 import Labels.JSON ()
 
 import qualified Hasql.Connection as H (Connection, Settings, settings, acquire, settings)
 import qualified Hasql.Session as H (Session(..), QueryError, run, statement)
 import qualified Hasql.Statement as HS (Statement(..))
 import qualified Hasql.Encoders as HE (Params(..), unit)
--- import Hasql.Decoders (Row(..), singleRow, rowList, column, nullableColumn, int8, text)
 import qualified Hasql.Decoders as HD (Result(..), Row(..), unit, rowList, column, text)
 
-import Control.Monad.Trans.Resource (ResourceT, allocate, release, runResourceT)
+--import Control.Monad.Trans.Reader (ReaderT(..), runReaderT, ask)
+import Control.Monad.Reader (runReaderT, ask)
+import Control.Monad.Trans.Resource (MonadResource, ResourceT, allocate, release, runResourceT)
 import Control.Concurrent.STM.TBMChan (TBMChan, newTBMChanIO, closeTBMChan, writeTBMChan)
+import Control.Monad.Fail (MonadFail)
 import Data.Conduit.TMChan (sourceTBMChan, sinkTBMChan)
 
+import UnliftIO (MonadUnliftIO)
 import UnliftIO.STM (atomically)
-import qualified UnliftIO.Async as U (async)
+import UnliftIO.Async (async)
 
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import qualified Network.Minio as M
-import Transient.Base (keep, async)
+import qualified Network.Minio.S3API as M
+
+main :: IO ()
+main = undefined
 
 unitSession :: B.ByteString -> H.Session ()
 unitSession sql = H.statement () $ HS.Statement sql HE.unit HD.unit True
@@ -59,8 +69,9 @@ fetchFromCursor name batchSize decoder =
   where sql = "FETCH FORWARD " <> (cs (show batchSize)) <> " FROM " <> name
 
 
-pgToChan :: (Show a) => H.Connection -> B.ByteString -> B.ByteString -> Int -> Int -> HD.Row a
-                        -> ResourceT IO (TBMChan [a]) 
+pgToChan :: (Show a, MonadResource m, MonadUnliftIO m)
+  => H.Connection -> B.ByteString -> B.ByteString -> Int -> Int -> HD.Row a
+  -> m (TBMChan [a]) 
 pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
   let runS :: H.Session a -> IO (Either H.QueryError a)
       runS = flip H.run connection
@@ -73,9 +84,8 @@ pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
           atomically $ writeTBMChan chan rows
           sinkRows chan
 
---  runResourceT $ do
   (reg, chan) <- allocate (newTBMChanIO chanSize) (atomically . closeTBMChan)
-  _ <- U.async $ liftIO $ do
+  _ <- async $ liftIO $ do
         runS $ unitSession "BEGIN"
         runS $ declareCursor cursorName sql () HE.unit
         sinkRows chan
@@ -84,12 +94,22 @@ pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
         release reg
   return chan
 
+type Fields =
+  [("id" := T.Text,
+    "name" := T.Text,
+    "description" := T.Text,
+    "type" := T.Text,
+    "state" := T.Text,
+    "timeliness" := T.Text,
+    "params" := T.Text,
+    "result_plugin_type" := T.Text,
+    "vendor_id" := T.Text,
+    "server_id" := T.Text,
+    "success_code" := T.Text)]
 
-
-query :: IO [B.ByteString]
-query = do
-  let
-    dsoChan = do
+pgChan :: (MonadFail m, MonadResource m, MonadUnliftIO m)
+  => ConduitT () Fields m ()
+pgChan = do
       let
         sql = [str|select
                     |  id, name, description, 'type'
@@ -115,21 +135,60 @@ query = do
                     <*> fmap (#server_id :=) textColumn
                     <*> fmap (#success_code :=) textColumn
                           
-      Right connection <- liftIO $ H.acquire pgSettings
-      pgToChan connection sql curName cursorSize chanSize mkRow
-    dseSink = do
-      bExist <- M.bucketExists "larluo"
-      when (not bExist) $ void $ M.makeBucket "larluo" Nothing
-  runConduitRes $ do
-      (lift dsoChan >>= sourceTBMChan)
-              .| C.concat
-              .| C.take 2
---              .| C.map ( -- ICU.fromUnicode gbkConv . ICU.toUnicode gbkConv .
---                         cs . J.encode)
---              .| C.iterM (liftIO . print)
---              .| C.map (flip B.append "\n"))
-              .| C.map (cs . show) .| C.sinkList
+      chan <- do
+        Right connection <- liftIO $ H.acquire pgSettings
+        lift $ pgToChan connection sql curName cursorSize chanSize mkRow
+      sourceTBMChan chan
 
+
+
+minIOSink
+  :: (MonadResource m, MonadFail m)
+    => ConduitT B.ByteString (Either M.MinioErr M.ETag) m ()
+minIOSink = do
+      let
+        (ci', accessKey, secretKey, bucket, filepath)
+          = ( "http://10.132.37.200:9000"
+            , "XF90I4NV5E1ZC2ROPVVR"
+            , "6IxTLFeA2g+pPuXu2J8BMvEUgywN6kr5Uckdf1O4"
+            , "larluo"
+            , "postgresql.txt")
+        ci = ci' & M.setCreds (M.Credentials accessKey secretKey)
+                 & M.setRegion "us-east-1"
+
+      Right uid <- liftIO . M.runMinio ci $ do
+        bExist <- M.bucketExists bucket
+        when (not bExist) $ void $ M.makeBucket bucket Nothing
+        let a = M.putObjectPart
+        M.newMultipartUpload bucket filepath  []
+
+      C.chunksOfE (2000 * 1000)
+        .| mergeSource (C.yieldMany [1..])
+        .| C.mapM  (\(pn, v) -> liftIO . M.runMinio ci $ M.putObjectPart bucket filepath uid pn [] (M.PayloadBS v))
+        .| (C.sinkList >>= yield . fromRight' . sequence)
+        .| C.mapM (liftIO . M.runMinio ci . M.completeMultipartUpload bucket filepath uid)
+
+
+repl :: IO ()
 repl = do
-  recs <- query
-  forM_ recs print
+  let
+    sftpSink = undefined
+    dataSandbox = ( #dataSource := pgChan
+                  , #stateContainer := undefined
+                  , #dataService := minIOSink)
+
+  flip runReaderT dataSandbox . runConduitRes $ do
+
+    sb <- ask
+    L.get #dataSource sb .| undefined
+{--    
+    (L.get #dataSource sb) 
+        .| C.concat
+        .| C.take 3
+        .| C.map ((<> "\n") .cs . J.encode)
+        .| (L.get #dataService sb)
+        .| C.sinkList
+--}
+    undefined
+  putStrLn "finished"
+ 

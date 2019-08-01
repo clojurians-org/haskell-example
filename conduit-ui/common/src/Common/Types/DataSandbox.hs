@@ -19,6 +19,7 @@ import Control.Applicative (liftA2)
 import Control.Lens ()
 import Text.Heredoc (str)
 import Data.String.Conversions (cs)
+import qualified Data.HashMap.Lazy as M
 
 data GlobalDataSandbox = GlobalDataSandbox {
     gdsaStateContainers :: [(Int64, StateContainer)]
@@ -128,7 +129,7 @@ instance Default DSOSQLCursor
 instance ToHaskellCodeBuilder DSOSQLCursor where
   toHaskellCodeBuilder dsoSQLCusor = HaskellCodeBuilder
     { hcbCombinators = TR.Node "dsoSQLCursorChan" []
-    , hcbFns = [("dsoSQLCursorChan", (cs . unlines)
+    , hcbFns = M.fromList [("dsoSQLCursorChan", (cs . unlines)
         [ "  let"
         , "    sql = [str|select"
         , "                |  id, name, description, 'type'"
