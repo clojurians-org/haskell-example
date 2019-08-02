@@ -46,8 +46,8 @@ data DataCircuit = DataCircuit {
     dciName :: T.Text
   , dciDesc :: T.Text
   , dciDataSandboxHolder :: DataSandboxHolder
-  , dciLinkedDataCircuits :: [DataCircuit]
-  , dciDataConduits :: [DataConduit]
+  , dciLinkedDataCircuits :: [(Int64, T.Text)]
+  , dciLinkedDataConduits :: [(Int64, T.Text)]
   , dciPartCombinator :: TR.Tree DataCircuitPart
   , dciConfigSchema :: T.Text
   , dciRequestSchema :: T.Text
@@ -78,7 +78,7 @@ data DataConduit = DataConduit {
   , dcoStateContainers :: [StateContainerHolder]
   , dcoDataSources :: [DataSourceHolder]
   , dcoDataServices :: [DataServiceHolder]
-  , dcoLogicFagements :: [ LogicFragment ]
+  , dcoLinkedLogicFagements :: [(Int64, T.Text)]
   , dcoPartCombinator :: TR.Tree DataConduitPart
   , dcoXid :: Maybe Int64
   } deriving (Generic, Show, Eq)
@@ -93,6 +93,8 @@ data DataConduitPart = DCOP_RootBindNode
                      | DCOP_ParallelNode T.Text
                      | DCOP_LinkedLogicFragment (Int64, T.Text)
                      | DCOP_EmbededLogicFragment LogicFragment
+                     | DCOP_LinkedPrimLogicFragment (Int64, T.Text)
+                     | DCOP_EmbededPrimLogicFragment PrimLogicFragment
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataConduitPart
 instance J.FromJSON DataConduitPart
@@ -101,14 +103,24 @@ instance Default DataConduitPart where def = DCOP_RootBindNode
 data LogicFragment = LogicFragment {
     lfName :: T.Text
   , lfDesc :: T.Text
-  , lfEffectEngineCode :: (Maybe EffecteEngine, T.Text)
-  , lfLinkedLogicFragments ::  [LogicFragment]
+  , lfLinkedLogicFragments ::  [(Int64, T.Text)]
+  , lfLinkedPrimLogicFragments :: [(Int64, T.Text)]
   , lfPartCombinator :: TR.Tree LogicFragmentPart
   , lfXid :: Maybe Int64
   } deriving (Generic, Show, Eq)
 instance J.ToJSON LogicFragment
 instance J.FromJSON LogicFragment
 instance Default LogicFragment
+
+data PrimLogicFragment = PrimLogicFragment {
+    plfName :: T.Text
+  , plfDesc :: T.Text
+  , plfEffectEngineCode :: (Maybe EffecteEngine, T.Text)  
+  , plfXid :: Maybe Int64
+  } deriving (Generic, Show, Eq)
+instance J.ToJSON PrimLogicFragment
+instance J.FromJSON PrimLogicFragment
+instance Default PrimLogicFragment
 
 data EffecteEngine = EE_Conduit | EE_Java | EE_R | EE_C
   deriving (Generic, Show, Eq)
@@ -122,6 +134,8 @@ data LogicFragmentPart = LFP_RootBindNode
                        | LFP_ParallelNode T.Text
                        | LFP_LinkedLogicFragment (Int64, T.Text)
                        | LFP_EmbededLogicFragment LogicFragment
+                       | LFP_LinkedPrimLogicFragment (Int64, T.Text)
+                       | LFP_EmbededPrimLogicFragment PrimLogicFragment
   deriving (Generic, Show, Eq)
 instance J.ToJSON LogicFragmentPart
 instance J.FromJSON LogicFragmentPart

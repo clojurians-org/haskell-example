@@ -93,7 +93,10 @@ pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
         release reg
   return chan
 
-pgChan = do
+repl :: IO ()
+repl = do
+  let
+    pgChan = do
       let
         sql = [str|select
                     |  id, name, description, 'type'
@@ -123,8 +126,8 @@ pgChan = do
         Right connection <- liftIO $ H.acquire pgSettings
         lift $ pgToChan connection sql curName cursorSize chanSize mkRow
       sourceTBMChan chan
-
-minIOSink = do
+    
+    minIOSink = do
       let
         (ci', accessKey, secretKey, bucket, filepath)
           = ( "http://10.132.37.200:9000"
@@ -146,23 +149,18 @@ minIOSink = do
         .| C.mapM  (\(pn, v) -> liftIO . M.runMinio ci $ M.putObjectPart bucket filepath uid pn [] (M.PayloadBS v))
         .| (C.sinkList >>= yield . fromRight' . sequence)
         .| C.mapM (liftIO . M.runMinio ci . M.completeMultipartUpload bucket filepath uid)
-
-
-repl :: IO ()
-repl = do
-  let
+    
     dataSandbox = ( #dataSource := pgChan
                   , #stateContainer := undefined
                   , #dataService := minIOSink)
-
-  runConduitRes . flip runReaderT dataSandbox $ do
-    dataSandbox <- ask
-    lift $ (L.get #dataSource dataSandbox)
-        .| C.concat
-        .| C.take 3
-        .| C.map ((<> "\n") .cs . J.encode)
-        .| (L.get #dataService dataSandbox)
-        .| C.sinkList
-
-  putStrLn "finished"
+    myConduit = do
+      void . runConduitRes . flip runReaderT dataSandbox $ do
+        dataSandbox <- ask
+        lift $ (L.get #dataSource dataSandbox )
+          .| C.concat
+          .| C.take 3
+          .| C.map ((<> "\n") .cs . J.encode)
+          .| (L.get #dataService dataSandbox)
+          .| C.sinkList
+  myConduit
  

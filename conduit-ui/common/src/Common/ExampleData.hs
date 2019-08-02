@@ -25,7 +25,8 @@ exampleAppST =
                         (M.fromList $ fmap (liftA2 (,) (fromJust . dciXid) id) exampleDataCircuits)
                     , #dataConduits := M.empty
 --                        fmap (liftA2 (,) (fromJust . dcoXid) id) exampleDataConduits
-                    , #logicFragments := M.empty )
+                    , #logicFragments := M.empty
+                    , #primLogicFragments := M.empty)
   , #dataSandbox := ( #stateContainers := M.empty
                     , #dataSources := M.empty
                     , #dataServices := M.empty )
@@ -110,8 +111,7 @@ examplePartCombinator dataCircuit = do
               [ flip TR.Node [] $ DCOP_EmbededLogicFragment $ def
                   { lfName = ""
                   , lfDesc = ""
-                  , lfEffectEngineCode =
-                      ( Just EE_Conduit, exampleEffectCode ) }
+                    }
               ]
           }
     ]

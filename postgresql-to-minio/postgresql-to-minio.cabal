@@ -45,6 +45,7 @@ executable postgresql-to-minio
     , http-client
     , http-client-tls
     , minio-hs
+    , libssh2
 --    , snap
 --    , servant-snap
 --    , servant

@@ -90,7 +90,7 @@ wsHandle appST (EventPulseAREQ name) = do
   evalResult <- runExceptT $ do
     eventPulse <- ExceptT $ return (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
     liftIO $ putStrLn . cs $ toHaskellCode exampleHaskellCodeBuilder
-    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder) eventPulse
+    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder undefined) eventPulse
   (return . EventPulseARES . mapLeft show) evalResult
   
 wsHandle appST unknown = do
