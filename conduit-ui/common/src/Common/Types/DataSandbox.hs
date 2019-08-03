@@ -21,15 +21,6 @@ import Text.Heredoc (str)
 import Data.String.Conversions (cs)
 import qualified Data.HashMap.Lazy as M
 
-data GlobalDataSandbox = GlobalDataSandbox {
-    gdsaStateContainers :: [(Int64, StateContainer)]
-  , gdsaDataSources :: [(Int64, DataSource)]
-  , gdsaDataServices :: [(Int64, DataService)]
-  } deriving (Generic, Show, Eq)
-instance J.ToJSON GlobalDataSandbox
-instance J.FromJSON GlobalDataSandbox
-instance Default GlobalDataSandbox
-
 data LinkedDataSandbox = LinkedDataSandbox {
     ldsaStateContainers :: [(Int64, StateContainer)]
   , ldsaDataSources :: [(Int64, DataSource)]
@@ -38,15 +29,6 @@ data LinkedDataSandbox = LinkedDataSandbox {
 instance J.ToJSON LinkedDataSandbox
 instance J.FromJSON LinkedDataSandbox
 instance Default LinkedDataSandbox
-
-data DataSandbox = DataSandbox {
-    dsaStateContainers :: [StateContainer]
-  , dsaSataSources :: [DataSource]
-  , dsaDataServices :: [DataService]
-  } deriving (Generic, Show, Eq)
-instance J.ToJSON DataSandbox
-instance J.FromJSON DataSandbox
-instance Default DataSandbox
 
 data DataSandboxHolder = DataSandboxHolder {
     dsahStateContainers :: [StateContainerHolder]

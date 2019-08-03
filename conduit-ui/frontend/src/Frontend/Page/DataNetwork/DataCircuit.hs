@@ -188,7 +188,7 @@ dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
                 divClass "item" $ do
                   elClass "i" "folder icon" blank
                   divClass "content" $ divClass "header" $ text "逻辑碎片"
-          dataCircuitDOM (examplePartCombinator def)
+          dataCircuitDOM examplePartCombinator
                       
     divClass "ui hidden divider" blank
     divClass "" $ do
@@ -197,7 +197,7 @@ dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
       divClass "ui attached segment" $ divClass "ui form field" $ do
         textAreaElement $ def
           & initialAttributes .~ ("rows" =: "20")
-          & textAreaElementConfig_initialValue .~ exampleEffectCode
+          & textAreaElementConfig_initialValue .~ exampleConduitCode
        
 
   return never

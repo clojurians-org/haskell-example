@@ -13,6 +13,7 @@ import GHC.Int (Int64)
 import GHC.Generics (Generic)
 import qualified Data.Aeson as J
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Tree as TR
 import qualified Data.HashMap.Lazy as M
 import Data.Default (Default(def))

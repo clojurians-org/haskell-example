@@ -41,7 +41,7 @@ import Control.Concurrent (MVar, newMVar, modifyMVar, modifyMVar_, readMVar, thr
 import Text.Regex.TDFA ((=~))
 
 initAppST :: IO (MVar AppST)
-initAppST = newMVar exampleAppST
+initAppST = newMVar exampleFaasCenter
 
 backend :: Backend BackendRoute FrontendRoute
 backend = Backend

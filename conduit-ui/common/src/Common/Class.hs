@@ -5,8 +5,9 @@
 module Common.Class where
 
 import Common.Types
-import Common.ExampleData
+-- import Common.ExampleData
 import Prelude
+import Debug.Trace
 
 import GHC.Generics (Generic)
 import Data.Function ((&))
@@ -38,12 +39,14 @@ toHaskellCode (HaskellCodeBuilder combinators fns selfFn) =
        <> (T.unlines . map ("    " <> ) . T.lines .  T.unlines) (map mkFn (M.toList fns))
        <> "  " <> combinatorsCode
   where
+    mkFn (name, body) = name <> "=do\n" <> body    
     combinatorsCode =
-      TR.foldTree (\x xs -> case null xs of
-                             True -> x
-                             False -> "(" <> T.intercalate x xs <> ")")
+      TR.foldTree (\x xs -> case length xs of
+                             0 -> x
+                             1 | elem x [">>", "<|>", "<>"] -> head xs
+                             1 -> x <> "(" <> head xs <> ")"
+                             _ -> "(" <> T.intercalate x xs <> ")")
         combinators
-    mkFn (name, body) = name <> "=do\n" <> body
 
 exampleHaskellCodeBuilder :: HaskellCodeBuilder
 exampleHaskellCodeBuilder = def
@@ -59,10 +62,12 @@ exampleHaskellCodeBuilder = def
 instance ToHaskellCodeBuilder EventPulse where
   toHaskellCodeBuilder faas ep =  do
     let dcivs@(x:xs) = (epDataCircuitValues ep)
+        tupleFnS 1 = "id"
+        tupleFnS n = T.replicate (n - 1)  ","
         hcbCombinator' = do
           foldl' (\b a -> TR.Node "<*>" [ b, (hcbCombinator . toHaskellCodeBuilder faas) a ])
-            (TR.Node "<$>" [ TR.Node (T.replicate (length dcivs) ",") []
-                           , (hcbCombinator . toHaskellCodeBuilder faas) x ])
+            (TR.Node "<$>" [ TR.Node (tupleFnS (length dcivs)) []
+                           , TR.Node "async" [(hcbCombinator . toHaskellCodeBuilder faas) x]])
             xs
         hcbFns' = (M.unions . fmap (hcbFns . toHaskellCodeBuilder faas)) dcivs
     def {hcbCombinator = hcbCombinator', hcbFns = hcbFns'}
@@ -73,7 +78,8 @@ instance ToHaskellCodeBuilder DataCircuitValue where
                     . lens #dataCircuits
                     . at (fst . dcivLinkedDataCircuit $ dciv)
                     & fromJust
-    toHaskellCodeBuilder faas dci
+                    
+    trace "ToHaskellCodeBuilder DataCircuitValue" $ toHaskellCodeBuilder faas dci
 
 instance ToHaskellCodeBuilder DataCircuit where
   toHaskellCodeBuilder faasCenter dci = toHaskellCodeBuilder faasCenter (dciPartCombinator dci)
@@ -179,6 +185,15 @@ instance ToHaskellCodeBuilder (TR.Tree LogicFragmentPart) where
   toHaskellCodeBuilder faas (TR.Node (LFP_EmbededLogicFragment lf) []) = do
     toHaskellCodeBuilder faas lf
 
+instance ToHaskellCodeBuilder PrimLogicFragment where
+  toHaskellCodeBuilder faasCenter plf = def
+    { hcbCombinator = TR.Node (plfName plf) []
+    , hcbFns = M.singleton (plfName plf) (snd . plfEffectEngineCode $ plf)
+      }
+
+instance ToHaskellCodeBuilder LinkedDataSandbox where
+  toHaskellCodeBuilder faasCenter (LinkedDataSandbox sc dso dse)  = def
+    
 instance ToHaskellCodeBuilder DSOSQLCursor where
   toHaskellCodeBuilder _ dsoSQLCusor = def
     { hcbCombinator = TR.Node "dsoSQLCursorChan" []
@@ -209,3 +224,4 @@ instance ToHaskellCodeBuilder DSOSQLCursor where
         , "  pgToChan connection sql curName cursorSize chanSize mkRow"
           ] )]
       }
+
