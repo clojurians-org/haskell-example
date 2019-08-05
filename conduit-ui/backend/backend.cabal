@@ -40,6 +40,7 @@ library
     , transient
     , regex-tdfa
     , minio-hs
+    , hlibssh2
 
   exposed-modules:
     Backend

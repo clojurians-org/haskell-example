@@ -123,13 +123,14 @@ data DataServiceHolder = DSEH_QueryService_PostgREST
                      | DSEH_QueryService_Kudu
                      | DSEH_FileService_MinIO
                      | DSEH_FileService_HDFS
-                     | DSEH_FileService_SFtp
+                     | DSEH_FileService_Sftp
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataServiceHolder
 instance J.FromJSON DataServiceHolder
 
 data DataService = DSE_QueryService_PostgREST DSEQSPostgREST
                  | DSE_FileService_MinIO DSEFSMinIO
+                 | DSE_FileService_SFTP DSEFSSFtp
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataService
 instance J.FromJSON DataService
@@ -145,3 +146,17 @@ data DSEFSMinIO = DSEFSMinIO
 instance J.ToJSON DSEFSMinIO
 instance J.FromJSON DSEFSMinIO
 instance Default DSEFSMinIO
+
+data DSEFSSFtp = DSEFSSFtp
+  { dsefsSFtpName :: T.Text
+  , dsefsSFtpDesc :: T.Text
+  , dsefsSFtpHost :: T.Text
+  , dsefsSFtpUsername :: T.Text
+  , dsefsSFtpPassword :: T.Text
+  , dsefsSFtpFilePath :: T.Text
+  , dsefsSFtpXid :: Maybe Int64
+    }
+  deriving (Generic, Show, Eq)
+instance J.ToJSON DSEFSSFtp
+instance J.FromJSON DSEFSSFtp
+instance Default DSEFSSFtp

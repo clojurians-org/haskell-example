@@ -16,6 +16,7 @@ project ./. ({ pkgs, hackGet, ... }: {
 
   packages = {
     labels-json = hackGet ./dep/labels-json ;
+    hlibssh2 = hackGet ./dep/libssh2-hs/hlibssh2 ;
   } ;
   overrides = self: super: {
     servant = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant"
@@ -66,6 +67,7 @@ project ./. ({ pkgs, hackGet, ... }: {
         sha256 = "1fs055hj46mjvmq1jfs48skclxfv431mnihjaqnmd2qvja23yvmk" ;
       }) {})) ;
 
+    hlibssh2 = pkgs.haskell.lib.addBuildDepends (pkgs.haskell.lib.addPkgconfigDepends super.hlibssh2 [pkgs.libssh2]) [pkgs.libssh2] ;
     # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;
 })

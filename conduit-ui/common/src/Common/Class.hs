@@ -117,7 +117,7 @@ instance ToHaskellCodeBuilder (TR.Tree DataCircuitPart) where
     toHaskellCodeBuilder faas dci
   toHaskellCodeBuilder faas (TR.Node (DCIP_EmbededDataConduit dco) []) = do
     toHaskellCodeBuilder faas dco
-  
+  toHaskellCodeBuilder faas _ = def
 
 instance ToHaskellCodeBuilder DataConduit where
   toHaskellCodeBuilder faasCenter dco = toHaskellCodeBuilder faasCenter (dcoPartCombinator dco)
@@ -223,5 +223,20 @@ instance ToHaskellCodeBuilder DSOSQLCursor where
         , "  Right connection <- liftIO $ H.acquire pgSettings"
         , "  pgToChan connection sql curName cursorSize chanSize mkRow"
           ] )]
+      }
+
+instance ToHaskellCodeBuilder DSEFSSFtp where
+  toHaskellCodeBuilder _ dsefsSFtp = def
+    { hcbCombinator = TR.Node "dsefsSFtpSink" []
+    , hcbFns = M.fromList [("dsefsSFtpSink", (cs . unlines)
+      [ "  let (hostname, port, username, password) = (\"localhost\", 22, \"larluo\", \"larluo\") "
+      , "      filepath = \"/Users/larluo/my-work/haskell-example/sftp-conduit/aaa.txt\" "
+      , "      flags = [FXF_WRITE, FXF_CREAT, FXF_TRUNC, FXF_EXCL] "
+      , "  bracketP (sessionInit hostname port) sessionClose $ \\s -> do "
+      , "    liftIO $ usernamePasswordAuth s username password "
+      , "    bracketP (sftpInit s) sftpShutdown $ \\sftp -> do "
+      , "      bracketP (sftpOpenFile sftp filepath 0o777 flags) sftpCloseHandle $ \\sftph -> "
+      , "        C.mapM (liftIO . sftpWriteFileFromBS sftph) "
+        ])]
       }
 
