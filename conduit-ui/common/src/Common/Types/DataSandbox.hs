@@ -22,9 +22,9 @@ import Data.String.Conversions (cs)
 import qualified Data.HashMap.Lazy as M
 
 data LinkedDataSandbox = LinkedDataSandbox {
-    ldsaStateContainers :: [(Int64, StateContainer)]
-  , ldsaDataSources :: [(Int64, DataSource)]
-  , ldsaDataServices :: [(Int64, DataService)]
+    ldsaStateContainers :: [(Int64, T.Text)]
+  , ldsaDataSources :: [(Int64, T.Text)]
+  , ldsaDataServices :: [(Int64, T.Text)]
   } deriving (Generic, Show, Eq)
 instance J.ToJSON LinkedDataSandbox
 instance J.FromJSON LinkedDataSandbox
@@ -85,6 +85,13 @@ data DataSource = DSO_SQLCursor DSOSQLCursor
 instance J.ToJSON DataSource
 instance J.FromJSON DataSource
 
+getDataSourceId :: DataSource -> Maybe Int64
+getDataSourceId (DSO_SQLCursor sqlCursor) =  dsoSQLCursorXid sqlCursor
+getDataSourceId _ =  Nothing
+getDataSourceName :: DataSource -> T.Text
+getDataSourceName (DSO_SQLCursor sqlCursor) =  dsoSQLCursorName sqlCursor
+getDataSourceName _ =  ""
+
 data DSORestAPI = DSORestAPI
   { dsoRestAPIName :: T.Text
   , dsoRestAPIHost :: T.Text }
@@ -95,6 +102,7 @@ instance Default DSORestAPI
 
 data DSOSQLCursor = DSOSQLCursor
   { dsoSQLCursorName :: T.Text
+  , dsoSQLCursorDesc :: T.Text
   , dsoSQLCursorType :: T.Text
   , dsoSQLCursorHost :: T.Text
   , dsoSQLCursorDatabase :: T.Text
@@ -102,7 +110,7 @@ data DSOSQLCursor = DSOSQLCursor
   , dsoSQLCursorPassword :: T.Text
   , dsoSQLCursorTable :: T.Text
   , dsoSQLCursorFields :: [T.Text]
-  , dsoSQLXid :: Maybe Int64 }
+  , dsoSQLCursorXid :: Maybe Int64 }
   deriving (Generic, Show, Eq)
 instance J.ToJSON DSOSQLCursor
 instance J.FromJSON DSOSQLCursor
@@ -135,14 +143,30 @@ data DataService = DSE_QueryService_PostgREST DSEQSPostgREST
 instance J.ToJSON DataService
 instance J.FromJSON DataService
 
-data DSEQSPostgREST = DSEQSPostgREST
-  deriving (Generic, Show, Eq)
+getDataServiceId :: DataService -> Maybe Int64
+getDataServiceId (DSE_QueryService_PostgREST postgREST) =  dseqsPostgRESTXid postgREST
+getDataServiceId (DSE_FileService_SFTP sftp) =  dsefsSFtpXid sftp
+getDataServiceId _ =  Nothing
+
+getDataServiceName :: DataService -> T.Text
+getDataServiceName (DSE_QueryService_PostgREST postgREST) =  dseqsPostgRESTName postgREST
+getDataServiceName (DSE_FileService_SFTP sftp) =  dsefsSFtpName sftp
+getDataServiceName _ = T.empty
+
+data DSEQSPostgREST = DSEQSPostgREST {
+    dseqsPostgRESTName :: T.Text
+  , dseqsPostgRESTDesc :: T.Text
+  , dseqsPostgRESTXid :: Maybe Int64
+  } deriving (Generic, Show, Eq)
 instance J.ToJSON DSEQSPostgREST
 instance J.FromJSON DSEQSPostgREST
 instance Default DSEQSPostgREST
 
-data DSEFSMinIO = DSEFSMinIO
-  deriving (Generic, Show, Eq)
+data DSEFSMinIO = DSEFSMinIO {
+    dsefsMinIOName :: T.Text
+  , dsefsMinIODesc :: T.Text
+  , dsefsMinIOXid :: Maybe Int64 
+  } deriving (Generic, Show, Eq)
 instance J.ToJSON DSEFSMinIO
 instance J.FromJSON DSEFSMinIO
 instance Default DSEFSMinIO

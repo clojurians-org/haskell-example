@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Common.Class where
 
@@ -8,6 +9,7 @@ import Common.Types
 -- import Common.ExampleData
 import Prelude
 import Debug.Trace
+import Data.String (IsString)
 
 import GHC.Generics (Generic)
 import Data.Function ((&))
@@ -19,8 +21,10 @@ import Data.List (foldl')
 import Data.String.Conversions (cs)
 import Data.Maybe (fromJust)
 
+import Data.Semigroup (sconcat)
 import Labels (lens)
-import Control.Lens (view, (^.), (.~), at)
+import Control.Lens (view, (^.), (^..), (.~), at, _Just, each, to)
+import qualified Data.List.NonEmpty as NE
 
 data HaskellCodeBuilder = HaskellCodeBuilder {
     hcbCombinator :: TR.Tree T.Text
@@ -40,7 +44,7 @@ toHaskellCode (HaskellCodeBuilder combinators fns selfFn) =
        <> "  " <> combinatorsCode
   where
     mkFn (name, body) = name <> "=do\n" <> body    
-    combinatorsCode =
+    combinatorsCode = "void $ " <>
       TR.foldTree (\x xs -> case length xs of
                              0 -> x
                              1 | elem x [">>", "<|>", "<>"] -> head xs
@@ -48,6 +52,7 @@ toHaskellCode (HaskellCodeBuilder combinators fns selfFn) =
                              _ -> "(" <> T.intercalate x xs <> ")")
         combinators
 
+{--
 exampleHaskellCodeBuilder :: HaskellCodeBuilder
 exampleHaskellCodeBuilder = def
   { hcbCombinator = TR.Node ">>" [ TR.Node "f" []
@@ -58,6 +63,7 @@ exampleHaskellCodeBuilder = def
              [ ("f", "  putStrLn \"hello world\"\n  putStrLn \"???\"")
              , ("g", "  putStrLn \"what's wrong\"")
              , ("h", "  putStrLn \"hi hi hi\"") ] }
+--}
 
 instance ToHaskellCodeBuilder EventPulse where
   toHaskellCodeBuilder faas ep =  do
@@ -78,8 +84,10 @@ instance ToHaskellCodeBuilder DataCircuitValue where
                     . lens #dataCircuits
                     . at (fst . dcivLinkedDataCircuit $ dciv)
                     & fromJust
-                    
-    trace "ToHaskellCodeBuilder DataCircuitValue" $ toHaskellCodeBuilder faas dci
+        dcivHCB = toHaskellCodeBuilder faas dci
+        ldsaHCB = toHaskellCodeBuilder faas (dcivLinkedDataSandbox dciv)
+    def { hcbCombinator = hcbCombinator dcivHCB
+        , hcbFns = hcbFns dcivHCB <> hcbFns ldsaHCB}
 
 instance ToHaskellCodeBuilder DataCircuit where
   toHaskellCodeBuilder faasCenter dci = toHaskellCodeBuilder faasCenter (dciPartCombinator dci)
@@ -155,6 +163,7 @@ instance ToHaskellCodeBuilder (TR.Tree DataConduitPart) where
     toHaskellCodeBuilder faas lpf
   toHaskellCodeBuilder faas (TR.Node (DCOP_EmbededPrimLogicFragment plf) []) = do
     toHaskellCodeBuilder faas plf
+  toHaskellCodeBuilder faas _ = def    
 
 instance ToHaskellCodeBuilder LogicFragment where
   toHaskellCodeBuilder faasCenter lf = toHaskellCodeBuilder faasCenter (lfPartCombinator lf)  
@@ -184,6 +193,7 @@ instance ToHaskellCodeBuilder (TR.Tree LogicFragmentPart) where
     toHaskellCodeBuilder faas lf
   toHaskellCodeBuilder faas (TR.Node (LFP_EmbededLogicFragment lf) []) = do
     toHaskellCodeBuilder faas lf
+  toHaskellCodeBuilder faas _ = def
 
 instance ToHaskellCodeBuilder PrimLogicFragment where
   toHaskellCodeBuilder faasCenter plf = def
@@ -192,12 +202,71 @@ instance ToHaskellCodeBuilder PrimLogicFragment where
       }
 
 instance ToHaskellCodeBuilder LinkedDataSandbox where
-  toHaskellCodeBuilder faasCenter (LinkedDataSandbox sc dso dse)  = def
-    
+  toHaskellCodeBuilder faas (LinkedDataSandbox lscs ldsos ldses)  = do
+    let scs = faas ^.. lens #dataSandbox
+                     . lens #stateContainers
+                     . (mconcat . fmap (\(x, _) -> at x . _Just) ) lscs
+        dsos = faas ^.. lens #dataSandbox
+                      . lens #dataSources
+                      . (mconcat . fmap (\(x, _) -> at x . _Just) ) ldsos
+        dses = faas ^.. lens #dataSandbox
+                      . lens #dataServices
+                      .  (mconcat . fmap (\(x, _) -> at x . _Just) ) ldses
+        scsFns = map (hcbFns . toHaskellCodeBuilder faas) scs
+        dsoFns = map (hcbFns . toHaskellCodeBuilder faas) dsos
+        dseFns = map (hcbFns . toHaskellCodeBuilder faas) dses
+        dasFns = M.singleton
+                   "dataSandbox"
+                   (T.unlines [ "  (  #stateContainer := undefined"
+                              , "   , #dataSource := "  <> (getDataSourceName . head $ dsos)
+                              , "   , #dataService := " <> (getDataServiceName . head $ dses)
+                              , "     )"])
+        
+    def { hcbFns = M.unions $ scsFns <> dsoFns <> dseFns <> [dasFns]
+         } 
+
+instance ToHaskellCodeBuilder StateContainer where
+  toHaskellCodeBuilder _ _ = def
+
+instance ToHaskellCodeBuilder DataSource where
+  toHaskellCodeBuilder faas (DSO_SQLCursor sqlCursor) = toHaskellCodeBuilder faas sqlCursor
+  toHaskellCodeBuilder _ _ = def
+  
+instance ToHaskellCodeBuilder DataService where
+  toHaskellCodeBuilder faas (DSE_FileService_MinIO minio) = toHaskellCodeBuilder faas minio    
+  toHaskellCodeBuilder faas (DSE_FileService_SFTP sftp) = toHaskellCodeBuilder faas sftp
+  toHaskellCodeBuilder _ _ = def
+
+
+instance ToHaskellCodeBuilder DSEFSMinIO where
+  toHaskellCodeBuilder _ minio = def
+    { hcbFns = M.fromList [(dsefsMinIOName minio, (cs . unlines)
+        [  "  let"
+         , "    (ci', accessKey, secretKey, bucket, filepath)"
+         , "      = ( \"http://10.132.37.200:9000\""
+         , "        , \"XF90I4NV5E1ZC2ROPVVR\""
+         , "        , \"6IxTLFeA2g+pPuXu2J8BMvEUgywN6kr5Uckdf1O4\""
+         , "        , \"larluo\""
+         , "        , \"postgresql.txt\")"
+         , "    ci = ci' & M.setCreds (M.Credentials accessKey secretKey)"
+         , "             & M.setRegion \"us-east-1\""
+         , "  "
+         , "  Right uid <- liftIO . M.runMinio ci $ do"
+         , "    bExist <- M.bucketExists bucket"
+         , "    when (not bExist) $ void $ M.makeBucket bucket Nothing"
+         , "    let a = M.putObjectPart"
+         , "    M.newMultipartUpload bucket filepath  []"
+         , "  "
+         , "  C.chunksOfE (2000 * 1000)"
+         , "    .| mergeSource (C.yieldMany [1..])"
+         , "    .| C.mapM  (\\(pn, v) -> liftIO . M.runMinio ci $ M.putObjectPart bucket filepath uid pn [] (M.PayloadBS v))"
+         , "    .| (C.sinkList >>= yield . fromRight' . sequence)"
+         , "    .| C.mapM (liftIO . M.runMinio ci . M.completeMultipartUpload bucket filepath uid)"
+          ])]
+      }
 instance ToHaskellCodeBuilder DSOSQLCursor where
   toHaskellCodeBuilder _ dsoSQLCusor = def
-    { hcbCombinator = TR.Node "dsoSQLCursorChan" []
-    , hcbFns = M.fromList [("dsoSQLCursorChan", (cs . unlines)
+    { hcbFns = M.fromList [(dsoSQLCursorName dsoSQLCusor, (cs . unlines)
         [ "  let"
         , "    sql = [str|select"
         , "                |  id, name, description, 'type'"
@@ -205,8 +274,10 @@ instance ToHaskellCodeBuilder DSOSQLCursor where
         , "                |, vendor_id, server_id, success_code"
         , "                |from tb_interface"
         , "                |] :: B.ByteString"
+        , "  "
         , "    pgSettings = H.settings \"10.132.37.200\" 5432 \"monitor\" \"monitor\" \"monitor\""
         , "    (curName, cursorSize, chanSize) = (\"larluo\", 200, 1000)"
+        , "  "
         , "    textColumn = HD.column HD.text"
         , "    mkRow = (,,,,,,,,,,)"
         , "                <$> fmap (#id :=) textColumn"
@@ -220,23 +291,24 @@ instance ToHaskellCodeBuilder DSOSQLCursor where
         , "                <*> fmap (#vendor_id :=) textColumn"
         , "                <*> fmap (#server_id :=) textColumn"
         , "                <*> fmap (#success_code :=) textColumn"
-        , "  Right connection <- liftIO $ H.acquire pgSettings"
-        , "  pgToChan connection sql curName cursorSize chanSize mkRow"
-          ] )]
+        , "  "
+        , "  chan <- do"
+        , "    Right connection <- liftIO $ H.acquire pgSettings"
+        , "    lift $ pgToChan connection sql curName cursorSize chanSize mkRow"
+        , "  sourceTBMChan chan"
+          ])]
       }
 
 instance ToHaskellCodeBuilder DSEFSSFtp where
   toHaskellCodeBuilder _ dsefsSFtp = def
-    { hcbCombinator = TR.Node "dsefsSFtpSink" []
-    , hcbFns = M.fromList [("dsefsSFtpSink", (cs . unlines)
-      [ "  let (hostname, port, username, password) = (\"localhost\", 22, \"larluo\", \"larluo\") "
-      , "      filepath = \"/Users/larluo/my-work/haskell-example/sftp-conduit/aaa.txt\" "
-      , "      flags = [FXF_WRITE, FXF_CREAT, FXF_TRUNC, FXF_EXCL] "
-      , "  bracketP (sessionInit hostname port) sessionClose $ \\s -> do "
-      , "    liftIO $ usernamePasswordAuth s username password "
-      , "    bracketP (sftpInit s) sftpShutdown $ \\sftp -> do "
-      , "      bracketP (sftpOpenFile sftp filepath 0o777 flags) sftpCloseHandle $ \\sftph -> "
-      , "        C.mapM (liftIO . sftpWriteFileFromBS sftph) "
+    { hcbFns = M.fromList [(dsefsSFtpName dsefsSFtp, (cs . unlines)
+      [ "  let (hostname, port, username, password) = (\"10.132.37.201\", 22, \"op\", \"op\") "
+      , "      filepath = \"larluo111.txt\" "
+      , "      flags = [SSH.FXF_WRITE, SSH.FXF_CREAT, SSH.FXF_TRUNC, SSH.FXF_EXCL] "
+      , "  bracketP (SSH.sessionInit hostname port) SSH.sessionClose $ \\s -> do "
+      , "    liftIO $ SSH.usernamePasswordAuth s username password "
+      , "    bracketP (SSH.sftpInit s) SSH.sftpShutdown $ \\sftp -> do "
+      , "      bracketP (SSH.sftpOpenFile sftp filepath 0o777 flags) SSH.sftpCloseHandle $ \\sftph -> "
+      , "        C.mapM (liftIO . SSH.sftpWriteFileFromBS sftph) "
         ])]
       }
-

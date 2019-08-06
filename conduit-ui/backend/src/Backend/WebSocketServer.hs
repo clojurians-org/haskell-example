@@ -21,6 +21,7 @@ import System.Random (randomRIO)
 import GHC.Int (Int64)
 import Data.String (IsString(..))
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Data.String.Conversions (cs)
 import qualified Data.Aeson as J
 import qualified Network.WebSockets as WS
@@ -37,8 +38,9 @@ import Control.Lens ((^.), (.~), view, over, at)
 import Control.Applicative ((<|>))
 import Labels (lens)
 
+import Control.Monad.Except (runExceptT, liftEither)
+import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, ExceptT(..), except)
--- import Control.Monad.Except (runExceptT, except)
 
 serveWebSocket :: MonadSnap m => MVar AppST ->  m ()
 serveWebSocket appST = runWebSocketsSnap (wsConduitApp appST)
@@ -85,12 +87,13 @@ wsHandle appST (HaskellCodeRunRequest r) =
     (I.runInterpreter . dynHaskell) r
 
 wsHandle appST (EventPulseAREQ name) = do
+  faas <- readMVar appST  
   let getter = lens #dataNetwork . lens #eventPulses . at name
-  eventPulseMaybe <- view getter <$> readMVar appST
+
+  let eventPulseMaybe = view getter faas
   evalResult <- runExceptT $ do
-    eventPulse <- ExceptT $ return (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
-    liftIO $ putStrLn . cs $ toHaskellCode exampleHaskellCodeBuilder
-    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder undefined) eventPulse
+    eventPulse <- liftEither $ (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
+    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder faas) eventPulse
   (return . EventPulseARES . mapLeft show) evalResult
   
 wsHandle appST unknown = do
@@ -107,3 +110,9 @@ dynHaskell stmt = do
                                    , I.QuasiQuotes]]
   I.runStmt (cs stmt)
 
+
+replRun :: IO ()
+replRun = do
+  let code = toHaskellCode . toHaskellCodeBuilder exampleFaasCenter $ (head exampleEventPulses)
+  T.putStrLn code
+  (mapLeft show <$> (I.runInterpreter . dynHaskell) code) >>= print

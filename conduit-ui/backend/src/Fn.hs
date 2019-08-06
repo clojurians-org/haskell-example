@@ -38,15 +38,17 @@ import Control.Concurrent.STM.TBMChan (TBMChan, newTBMChanIO, closeTBMChan, writ
 import Data.Conduit.TMChan (sourceTBMChan, sinkTBMChan)
 
 import UnliftIO.STM (atomically)
-import qualified UnliftIO.Async as U (async)
+import UnliftIO.Async (async)
 
-import Transient.Base (keep, async)
+import qualified Transient.Base as TS (keep, async) 
 import Control.Monad.Trans (MonadIO, MonadTrans, lift, liftIO)
 
 import qualified Network.Minio as M
 import qualified Network.Minio.S3API as M
 import qualified Network.SSH.Client.LibSSH2 as SSH
 import qualified Network.SSH.Client.LibSSH2.Foreign as SSH
+
+import Control.Lens
 
 unitSession :: B.ByteString -> H.Session ()
 unitSession sql = H.statement () $ HS.Statement sql HE.unit HD.unit True
@@ -81,7 +83,7 @@ pgToChan connection sql cursorName cursorSize chanSize rowDecoder = do
 
 --  runResourceT $ do
   (reg, chan) <- allocate (newTBMChanIO chanSize) (atomically . closeTBMChan)
-  _ <- U.async $ liftIO $ do
+  _ <- async $ liftIO $ do
         runS $ unitSession "BEGIN"
         runS $ declareCursor cursorName sql () HE.unit
         sinkRows chan
@@ -146,8 +148,8 @@ repl = do
         .| C.mapM (liftIO . M.runMinio ci . M.completeMultipartUpload bucket filepath uid)
         .| C.sinkNull
     sftpSink = do
-      let (hostname, port, username, password) = ("localhost", 22, "larluo", "larluo")
-          filepath = "/Users/larluo/my-work/haskell-example/sftp-conduit/aaa.txt"
+      let (hostname, port, username, password) = ("10.132.37.201", 22, "op", "op")
+          filepath = "aaa.txt"
           flags = [SSH.FXF_WRITE, SSH.FXF_CREAT, SSH.FXF_TRUNC, SSH.FXF_EXCL]
       bracketP (SSH.sessionInit hostname port) SSH.sessionClose $ \s -> do
         liftIO $ SSH.usernamePasswordAuth s username password
@@ -155,9 +157,6 @@ repl = do
           bracketP (SSH.sftpOpenFile sftp filepath 0o777 flags) SSH.sftpCloseHandle $ \sftph ->
             C.mapM (liftIO . SSH.sftpWriteFileFromBS sftph) .| C.sinkNull
 
-    dataSandbox = ( #dataSource := pgChan
-                  , #stateContainer := undefined
-                  , #dataService := getZipConduit (ZipConduit minIOSink <* ZipConduit sftpSink))
     myConduit = do
       void . runConduitRes . flip runReaderT dataSandbox $ do
         dataSandbox <- ask
@@ -167,5 +166,9 @@ repl = do
           .| C.map ((<> "\n") .cs . J.encode)
           .| (L.get #dataService dataSandbox)
           .| C.sinkList
+          
+    dataSandbox = ( #dataSource := pgChan
+                  , #stateContainer := undefined
+                  , #dataService := getZipConduit (ZipConduit minIOSink <* ZipConduit sftpSink))
+          
   myConduit
-
