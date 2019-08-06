@@ -18,7 +18,8 @@ import Data.Default (Default(def))
 import Control.Applicative (liftA2)
 import Control.Lens ()
 
-data WSRequestMessage = HaskellCodeRunRequest T.Text
+data WSRequestMessage = AppInitREQ 
+                    | HaskellCodeRunRequest T.Text
                     -- EventPulse
                     | EventPulseCREQ EventPulse
                     | EventPulseAREQ T.Text
@@ -39,7 +40,7 @@ data WSRequestMessage = HaskellCodeRunRequest T.Text
 instance J.ToJSON WSRequestMessage
 instance J.FromJSON WSRequestMessage
 
-data WSResponseMessage = WSInitResponse AppST
+data WSResponseMessage = AppInitRES AppST
                      | HaskellCodeRunResponse (Either String ())
                      -- EventPulse
                      | EventPulseCRES (Either String EventPulse)
@@ -75,9 +76,9 @@ isELCronTimerDREQ _ = False
 ----------------
 -- Response
 ----------------
-isWSInitResponse :: WSResponseMessage -> Bool
-isWSInitResponse (WSInitResponse _) = True
-isWSInitResponse _ = False
+isAppInitRES :: WSResponseMessage -> Bool
+isAppInitRES (AppInitRES _) = True
+isAppInitRES _ = False
 
 isHaskellCodeRunResponse :: WSResponseMessage -> Bool
 isHaskellCodeRunResponse (HaskellCodeRunResponse  _) = True

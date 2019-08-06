@@ -177,7 +177,9 @@ data DSEFSSFtp = DSEFSSFtp
   , dsefsSFtpHost :: T.Text
   , dsefsSFtpUsername :: T.Text
   , dsefsSFtpPassword :: T.Text
+  , dseftSFtpFileFormat :: T.Text
   , dsefsSFtpFilePath :: T.Text
+  , dsefsSFtpFilePattern :: T.Text  
   , dsefsSFtpXid :: Maybe Int64
     }
   deriving (Generic, Show, Eq)

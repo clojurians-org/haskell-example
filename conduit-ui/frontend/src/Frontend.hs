@@ -22,6 +22,7 @@ import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, da
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
 import Frontend.Page.EventLake.CronTimer (eventLake_cronTimer_handle, eventLake_cronTimer)
 import Frontend.Page.DataSandbox.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
+import Frontend.Page.DataSandbox.DataService.FileService.SFTP (dataService_sftp_handle, dataService_sftp)
 
 import Prelude
 
@@ -52,7 +53,8 @@ import Text.Regex.TDFA ((=~))
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
 import System.Random (randomRIO)
-import Control.Concurrent (MVar, newMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
+import Control.Concurrent
+  (MVar, newMVar, swapMVar, threadDelay)
 
 import Labels ((:=)(..), Has)
 
@@ -134,14 +136,13 @@ nav = do
       divClass "item" $ text "个人报表"
       divClass "item" $ text "报表开发器"
 
-page :: forall t js m r.
+page :: forall t js m.
   ( DomBuilder t m, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
   , MonadIO m, MonadIO (Performable m)
-  , Has "elCronTimers" [ELCronTimer] r
   )
-  => MVar r
+  => MVar AppST
   -> Event t WSResponseMessage
   -> RoutedT t (R FrontendRoute) m (Event t [WSRequestMessage])
 page wsST wsResponseEvt = do
@@ -153,7 +154,9 @@ page wsST wsResponseEvt = do
   dataNetwork_dataCircuit_st <- dataNetwork_dataCircuit_handle wsST wsResponseEvt
   
   eventLake_cronTimer_st <- eventLake_cronTimer_handle wsST wsResponseEvt
+  
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsST wsResponseEvt
+  dataService_sftp_st <- dataService_sftp_handle wsST wsResponseEvt
 
   fmap switchDyn $ subRoute $ \case
       FrontendRoute_Main -> text "my main" >> return never
@@ -184,7 +187,7 @@ page wsST wsResponseEvt = do
           DataServiceRoute_QueryService_Kudu -> text "my DataServiceRoute_QueryService_Kudu" >> return never                
           DataServiceRoute_FileService_MinIO -> text "my DataServiceRoute_FileService_MinIO" >> return never
           DataServiceRoute_FileService_HDFS -> text "my DataServiceRoute_FileService_HDFS" >> return never
-          DataServiceRoute_FileService_SFtp -> text "my DataServiceRoute_FileService_SFtp" >> return never
+--          DataServiceRoute_FileService_SFtp -> dataService_sftp dataService_sftp_st
           DataServiceRoute_NotifyService_WebHook -> text "my DataServiceRoute_NotifyService_WebHook" >> return never
           DataServiceRoute_NotifyService_Email -> text "my DataServiceRoute_NotifyService_Email" >> return never
 
@@ -209,17 +212,22 @@ frontend = Frontend
       (host, port, path) <- liftIO $ askWSInfo
       let wsURL = "ws://" <> host <> ":" <> (cs . show) port <> path
 
-      wsST <- liftIO mkWSStateContainer
+--      wsST <- liftIO mkWSStateContainer
+      appST <- liftIO $ newMVar defAppST
+      pb <- getPostBuild
       rec
-        wsResponseEvt <- handleWSRequest wsURL wsRequestEvt
+        wsResponseEvt <- handleWSRequest wsURL (leftmost [wsRequestEvt, [AppInitREQ] <$ pb])
         wsRequestEvt <- do
+          (initE, tailE) <- headTailE wsResponseEvt
+          performEvent $ ffor initE $ \(AppInitRES initAppST) ->
+            liftIO $ swapMVar appST initAppST
           divClass "ui message icon" $ do
             elClass "i" "notched circle loading icon" blank
             elClass "h1" "ui header" $
               routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
           divClass "ui grid" $ do
             divClass "ui two wide column vertical menu visible compact" $ nav
-            divClass "ui fourteen wide column container" $ page wsST wsResponseEvt
+            divClass "ui fourteen wide column container" $ page appST tailE
       return ()
   }
 

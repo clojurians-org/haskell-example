@@ -54,26 +54,27 @@ fromCronTimerPayload _  = Nothing
 eventLake_cronTimer_handle
   :: forall t m r.
      ( MonadHold t m, MonadFix m
-     , MonadIO m, MonadIO (Performable m), PerformEvent t m
-     , Has "elCronTimers" [ELCronTimer] r)
+     , MonadIO m, MonadIO (Performable m), PerformEvent t m )
+--      , Has "elCronTimers" [ELCronTimer] r)
   => MVar r -> Event t WSResponseMessage
   -> m (Event t WSResponseMessage, Dynamic t [ELCronTimer])
 eventLake_cronTimer_handle wsST wsResponseEvt = do
-  let wsEvt = ffilter (isWSInitResponse ||| isELCronTimerCRES ||| isELCronTimerURES ||| isELCronTimerDRES) wsResponseEvt
+  let wsEvt = ffilter (isELCronTimerCRES ||| isELCronTimerURES ||| isELCronTimerDRES) wsResponseEvt
   myST <- liftIO $ readMVar wsST
   wsDyn <- foldDyn (\wsMsg xs -> case wsMsg of
-                       WSInitResponse appST  ->
-                         [] ++ xs
                        ELCronTimerCRES (Right cronTimer) -> cronTimer : xs
                        ELCronTimerURES (Right cronTimer) ->
                          cronTimer : filter (on (==) elctXid cronTimer) xs
                        ELCronTimerDRES (Right cronId) ->
                          filter ((/= cronId) . fromJust . elctXid) xs
                        _ -> xs)
-             (get #elCronTimers myST) wsEvt
+             [] wsEvt
+{--
+  (get #elCronTimers myST) wsEvt
   performEvent $ do
     ffor (updated wsDyn) $ \xs ->  do
       liftIO $ modifyMVar_ wsST $ return . set #elCronTimers xs
+--}
       
   return (wsEvt, (fmap (sortOn elctName) wsDyn))
 

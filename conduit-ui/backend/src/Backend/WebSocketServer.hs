@@ -49,7 +49,6 @@ wsConduitApp :: MVar AppST -> WS.ServerApp
 wsConduitApp appST pending= do
   putStrLn "websocket connection accepted ..."
   conn <- WS.acceptRequest pending
-  readMVar appST >>= WS.sendTextData conn . J.encode . WSInitResponse
 
   runConduit
     $ (forever $ liftIO (WS.receiveData conn) >>= yield . J.decode)
@@ -81,7 +80,9 @@ wsHandle appST = \case
     return . WSResponseUnknown $ unknown
 --}
 
-wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage    
+wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage
+wsHandle appST AppInitREQ = do
+  return . AppInitRES =<< readMVar appST
 wsHandle appST (HaskellCodeRunRequest r) =
   return . HaskellCodeRunResponse . mapLeft show =<<
     (I.runInterpreter . dynHaskell) r

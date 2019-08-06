@@ -43,7 +43,6 @@ myAPI = pong :<|> postEvent :<|> getEvent
             (host, port, path) <- askWSInfo
             WS.runClient (cs host) port (cs path) $ \conn -> do
               (WS.sendTextData conn . J.encode . EventPulseAREQ) name
-              _  {-- drop init --} <- WS.receiveData conn :: IO T.Text 
               WS.receiveData conn
               <* WS.sendClose conn ("Byte!" :: T.Text)
           return $ APIEventResponse wsRet 0
