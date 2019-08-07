@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 module Common.Types.DataSandbox where
 
@@ -20,6 +21,7 @@ import Control.Lens ()
 import Text.Heredoc (str)
 import Data.String.Conversions (cs)
 import qualified Data.HashMap.Lazy as M
+import Labels
 
 data LinkedDataSandbox = LinkedDataSandbox {
     ldsaStateContainers :: [(Int64, T.Text)]
@@ -171,13 +173,22 @@ instance J.ToJSON DSEFSMinIO
 instance J.FromJSON DSEFSMinIO
 instance Default DSEFSMinIO
 
+{--
+type DSEFSSFtp = ( "name" := T.Text
+                  , "desc" := T.Text
+                  , "host" := T.Text
+                  , "username" := T.Text
+                  , "password" := T.Text
+                  , "fileFormat" := T.Text )
+--}
+
 data DSEFSSFtp = DSEFSSFtp
   { dsefsSFtpName :: T.Text
   , dsefsSFtpDesc :: T.Text
   , dsefsSFtpHost :: T.Text
   , dsefsSFtpUsername :: T.Text
   , dsefsSFtpPassword :: T.Text
-  , dseftSFtpFileFormat :: T.Text
+  , dsefsSFtpFileFormat :: T.Text
   , dsefsSFtpFilePath :: T.Text
   , dsefsSFtpFilePattern :: T.Text  
   , dsefsSFtpXid :: Maybe Int64
@@ -186,3 +197,4 @@ data DSEFSSFtp = DSEFSSFtp
 instance J.ToJSON DSEFSSFtp
 instance J.FromJSON DSEFSSFtp
 instance Default DSEFSSFtp
+

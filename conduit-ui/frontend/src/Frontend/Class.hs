@@ -1,17 +1,66 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Frontend.Class where
 
+import Common.Types
+import Common.WebSocketMessage
+import Frontend.Widget
 import Prelude
 import Reflex.Dom.Core
-import Common.Types.DataNetwork
-import Common.WebSocketMessage
+import Labels
 
 import qualified Data.Tree as TR
 import qualified Data.Text as T
-import Control.Monad (forM_)
+import Data.Functor ((<&>))
+import Control.Applicative (liftA2)
+import Control.Monad (forM_, void, (>=>))
+import Control.Monad.Fix (MonadFix)
+import Data.Default (Default(def))
+import GHC.Int (Int64)
 
+trE :: forall t m. (DomBuilder t m) => m () -> m (Event t ())
+trE = fmap (void . domEvent Click . fst) . el' "tr"
+
+createIcon :: forall t m. (DomBuilder t m) => m ()
+createIcon = el "td" $ elClass "i" "pencil icon" blank
+
+selectE :: forall t m.(DomBuilder t m, PostBuild t m) => m ()
+selectE = void $ el "td" $ checkbox False def
+
+tdDyn :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> m (Dynamic t T.Text)
+tdDyn = el "td" . divClass "ui mini input" . dynInputDB
+
+class (Default a) => ToTable a where
+--  toTR :: a -> m (Behavior t a)
+  defDyn :: forall t. Reflex t => Dynamic t a
+  defDyn = constDyn def
+  toTR :: forall t m. (DomBuilder t m, PostBuild t m) => Dynamic t a -> m ()
+  toTable :: forall t m. (DomBuilder t m, PostBuild t m, MonadHold t m, MonadFix m)
+    => Dynamic t [a] -> m (Event t a)
+
+instance ToTable DSEFSSFtp where
+  toTR sftpD = do
+    tdDyn (dsefsSFtpName <$> sftpD)
+    tdDyn (dsefsSFtpDesc <$> sftpD)
+    tdDyn (dsefsSFtpHost <$> sftpD)
+    tdDyn (dsefsSFtpFileFormat <$> sftpD)
+    tdDyn (dsefsSFtpFilePath <$> sftpD)   
+    return ()
+  toTable sftpsD = do
+    elClass "table" "ui selectable table" $ do
+      theadList ["名称", "描述", "主机", "格式", "目的地"]
+      el "tbody" $ do
+        e0 <- (trE $ createIcon >> toTR (constDyn (def::DSEFSSFtp)))
+                <&> tagPromptlyDyn (return def)
+        e1 <- switchDyn . fmap leftmost <$> simpleList sftpsD
+                (\x -> (trE $ selectE >> toTR x)
+                       <&> tagPromptlyDyn x)
+        return $ leftmost [e0, e1]
+      
+    
 class ToUI a where
   toLabel :: a -> T.Text
   toIcon :: a -> T.Text
