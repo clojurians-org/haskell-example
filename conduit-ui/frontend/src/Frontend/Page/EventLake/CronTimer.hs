@@ -13,7 +13,7 @@ import Common.WebSocketMessage
 import Common.Types
 import Prelude
 
-import Reflex.Dom.Core
+import Reflex.Dom.Core hiding (mapMaybe)
 import Data.Function (on)
 import Control.Monad (forM_, void, guard)
 

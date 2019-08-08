@@ -20,7 +20,7 @@ import Control.Monad (forM)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Text as T
-import Reflex.Dom.Core
+import Reflex.Dom.Core hiding (mapMaybe)
 
 import Control.Concurrent (MVar, readMVar)
 import Data.String.Conversions (cs)

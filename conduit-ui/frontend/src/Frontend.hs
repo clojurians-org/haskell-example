@@ -5,9 +5,19 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE OverloadedLabels #-}
+
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
+{-# LANGUAGE CPP, FlexibleContexts, FlexibleInstances, FunctionalDependencies, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase, MultiParamTypeClasses, PatternSynonyms, RankNTypes, ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving, TemplateHaskell, TypeFamilies, UndecidableInstances #-}
+
 
 module Frontend where
 
@@ -27,6 +37,8 @@ import Frontend.Page.DataSandbox.DataService.FileService.SFTP (dataService_sftp_
 import Prelude
 
 import GHC.Int (Int64)
+import Data.Coerce (coerce)
+import Control.Monad (void)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -41,14 +53,17 @@ import Common.Api
 import Common.Route
 import Obelisk.Generated.Static
 
+import Data.Functor ((<&>))
 import Control.Monad.Fix (MonadFix)
 import Data.Default (def)
+import Data.Semigroup (Endo(..))
 import Data.String.Conversions (cs)
 
-import Reflex (never)
-import Obelisk.Route.Frontend (RoutedT, RouteToUrl, SetRoute, routeLink, askRoute, subRoute, subRoute_)
+import Reflex
+import Obelisk.Route.Frontend
+--  ( RoutedT, RouteToUrl(..), SetRoute(..)
+--  , mapRoutedT, routeLink, askRoute, subRoute, subRoute_)
 
-import qualified Obelisk.ExecutableConfig as Cfg
 import Text.Regex.TDFA ((=~))
 import Control.Applicative ((<|>))
 import Data.Maybe (fromJust)
@@ -58,14 +73,14 @@ import Control.Concurrent
 
 import Labels ((:=)(..), Has)
 
-htmlHeader :: DomBuilder t m => m ()
-htmlHeader = do
-  elAttr "link" ( "rel" =: "stylesheet"
-               <> "href" =: "https://cdn.jsdelivr.net/npm/semantic-ui@2.3.3/dist/semantic.min.css") blank
+import Control.Monad.Trans (MonadTrans(lift), MonadIO(liftIO))
+import Control.Monad.Reader (ReaderT, runReaderT)
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
+import Reflex.Host.Class (MonadReflexCreateTrigger)
 
-nav :: forall t js m. ( DomBuilder t m, Prerender js m
-        , PerformEvent t m, TriggerEvent t m, PostBuild t m
-        , RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m) => m ()
+nav :: forall t js m. ( DomBuilder t m, RouteToUrl (R FrontendRoute) m, SetRoute t (R FrontendRoute) m)
+  => m ()
 nav = do
   divClass "item" $ do
     elClass "h4" "ui header" $ text "数据网络"
@@ -135,18 +150,85 @@ nav = do
       divClass "item" $ text "公共报表"
       divClass "item" $ text "个人报表"
       divClass "item" $ text "报表开发器"
+  
+frontend :: Frontend (R FrontendRoute)
+frontend = Frontend htmlHeader blank
+
+htmlHeader :: DomBuilder t m => m ()
+htmlHeader = do
+  elAttr "link" ( "rel" =: "stylesheet"
+               <> "href" =: "https://cdn.jsdelivr.net/npm/semantic-ui@2.3.3/dist/semantic.min.css") blank
+
+type RoutedAppState t m = RoutedT t (R FrontendRoute) (AppState t m)
+newtype FrontendStateT (t :: * ) s m a = FrontendStateT
+  { unFrontendStateT :: ReaderT (Dynamic t s) m a }
+  deriving ( Functor, Applicative, Monad, MonadFix, MonadTrans, MonadIO
+           , MonadSample t, MonadHold t, PostBuild t, TriggerEvent t
+           , PerformEvent t, DomBuilder t, NotReady t)
+
+instance Adjustable t m => Adjustable t (FrontendStateT t s m) where
+  runWithReplace a0 a' = FrontendStateT $ runWithReplace (coerce a0) $ coerceEvent a'
+  traverseIntMapWithKeyWithAdjust f a0 a' = FrontendStateT $ traverseIntMapWithKeyWithAdjust (coerce f) (coerce a0) $ coerce a'
+  traverseDMapWithKeyWithAdjust f a0 a' = FrontendStateT $ traverseDMapWithKeyWithAdjust (\k v -> coerce $ f k v) (coerce a0) $ coerce a'
+  traverseDMapWithKeyWithAdjustWithMove f a0 a' = FrontendStateT $ traverseDMapWithKeyWithAdjustWithMove (\k v -> coerce $ f k v) (coerce a0) $ coerce a'
+
+instance (Monad m, RouteToUrl r m) => RouteToUrl r (FrontendStateT t s m) where
+  askRouteToUrl = lift askRouteToUrl
+instance (Monad m, SetRoute t r m) => SetRoute t r (FrontendStateT t s m) where
+  setRoute = lift . setRoute
+  modifyRoute = lift . modifyRoute
+
+type AppState t m = EventWriterT t [WSRequestMessage] (FrontendStateT t (FaaSCenter, Event t WSResponseMessage) m)
+
+runFrontendStateT :: FrontendStateT t s m a -> Dynamic t s -> m a
+runFrontendStateT t = runReaderT (unFrontendStateT t)
+  
+htmlBody :: forall js t m. ObeliskWidget js t (R FrontendRoute) m
+  => RoutedT t (R FrontendRoute) m ()
+htmlBody = mapRoutedT unraverlAppState $ do
+  text "hello world"
+  pb <- getPostBuild
+  tellEvent ([AppInitREQ] <$ pb)
+  divClass "ui message icon" $ do
+    elClass "i" "notched circle loading icon" $ do
+        elClass "h1" "ui header" $
+          routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
+  divClass "ui grid" $ do
+    divClass "ui two wide column vertical menu visible compact" $ nav
+    divClass "ui fourteen wide column container" page
+  return ()
+  where
+    unraverlAppState :: AppState t m () -> m ()
+    unraverlAppState m = mdo
+      appD <- foldDyn appEndo (defAppST, never) (updateGlobal wsRES)
+      wsRES <- do
+        wsREQs <- flip runFrontendStateT appD $ runEventWriterT m <&> snd
+        let wsURL = "ws://localhost:8000/wsConduit"
+        handleWSRequest wsURL wsREQs
+      pure ()
+
+handleWSRequest :: forall t m js.
+  ( DomBuilder t m, Prerender js t m, MonadHold t m
+  , PerformEvent t m, TriggerEvent t m, PostBuild t m)
+  => T.Text -> Event t [WSRequestMessage] -> m (Event t WSResponseMessage)
+handleWSRequest wsURL wsRequests =
+  fmap switchDyn . prerender (return never) $ do
+    ws <- webSocket wsURL $
+      def & webSocketConfig_send .~ ((fmap . fmap) J.encode wsRequests)
+    return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
+
+updateGlobal :: forall t. Event t WSResponseMessage -> Endo (FaaSCenter, Event t WSResponseMessage)
+updateGlobal = \case
+  msg@(AppInitRES state0) -> Endo $ const (undefined, msg)
 
 page :: forall t js m.
-  ( DomBuilder t m, Prerender js m
+  ( DomBuilder t m --, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
-  , MonadIO m, MonadIO (Performable m)
   )
-  => Dynamic t AppST
-  -> Event t WSResponseMessage
-  -> RoutedT t (R FrontendRoute) m (Event t [WSRequestMessage])
-page stD wsResponseEvt = do
-  wsSTNotUsed <- liftIO $ newMVar defAppST  
+  => RoutedT t (R FrontendRoute) m ()
+page = do
+      {--
   dataNetwork_eventPulse_st <- dataNetwork_eventPulse_handle wsSTNotUsed wsResponseEvt
   dataNetwork_effectEngine_st <- dataNetwork_effectEngine_handle wsSTNotUsed wsResponseEvt
   dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsSTNotUsed wsResponseEvt
@@ -157,73 +239,37 @@ page stD wsResponseEvt = do
   
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsSTNotUsed wsResponseEvt
   dataService_sftp_st <- dataService_sftp_handle stD wsResponseEvt
+  --}
+  subRoute_ $ \case
+      FrontendRoute_Main -> text "my main"
+      FrontendRoute_DataNetwork -> subRoute_ $ \case
+        DataNetworkRoute_EventPulse -> void $ dataNetwork_eventPulse undefined
+        DataNetworkRoute_EffectEngine -> void $ dataNetwork_effectEngine undefined
+        DataNetworkRoute_LogicFragement -> void $ dataNetwork_logicFragement undefined
+        DataNetworkRoute_DataConduit ->  void $ dataNetwork_dataConduit undefined
+        DataNetworkRoute_DataCircuit -> void $ dataNetwork_dataCircuit undefined
+      FrontendRoute_EventLake -> subRoute_ $ \case
+        EventLakeRoute_CronTimer -> void $ eventLake_cronTimer undefined
+        EventLakeRoute_FileWatcher -> text "my EventLakeRoute_FileWatcher"
+      FrontendRoute_DataSandbox -> subRoute_ $ \case
+        DataSandboxRoute_StateContainer -> subRoute_ $ \case
+          StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL"
+          StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB"
+          StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite"
+        DataSandboxRoute_DataSource -> subRoute_ $ \case
+          DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka"
+          DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket"
+          DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI"
+          DataSourceRoute_SQLCursor -> void $ dataSource_sqlCursor undefined
+          DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO"
 
-  fmap switchDyn $ subRoute $ \case
-      FrontendRoute_Main -> text "my main" >> return never
-      FrontendRoute_DataNetwork -> fmap switchDyn $ subRoute $ \case
-        DataNetworkRoute_EventPulse -> dataNetwork_eventPulse dataNetwork_eventPulse_st
-        DataNetworkRoute_EffectEngine -> dataNetwork_effectEngine dataNetwork_effectEngine_st
-        DataNetworkRoute_LogicFragement -> dataNetwork_logicFragement dataNetwork_logicFragement_st 
-        DataNetworkRoute_DataConduit ->  dataNetwork_dataConduit dataNetwork_dataConduit_st
-        DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit dataNetwork_dataCircuit_st
-      FrontendRoute_EventLake -> fmap switchDyn $ subRoute $ \case
-        EventLakeRoute_CronTimer -> eventLake_cronTimer eventLake_cronTimer_st
-        EventLakeRoute_FileWatcher -> text "my EventLakeRoute_FileWatcher" >> return never
-      FrontendRoute_DataSandbox -> fmap switchDyn $ subRoute $ \case
-        DataSandboxRoute_StateContainer -> fmap switchDyn $ subRoute $ \case
-          StateContainerRoute_PostgreSQL -> text "my StateContainerRoute_PostgreSQL" >> return never
-          StateContainerRoute_RocksDB -> text "my StateContainerRoute_RocksDB" >> return never
-          StateContainerRoute_SQLLite -> text "my StateContainerRoute_SQLLite" >> return never
-        DataSandboxRoute_DataSource -> fmap switchDyn $ subRoute $ \case
-          DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka" >> return never
-          DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket" >> return never
-          DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI" >> return never        
-          DataSourceRoute_SQLCursor -> dataSource_sqlCursor dataSource_sqlCursor_st
-          DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO" >> return never        
-        DataSandboxRoute_DataService -> fmap switchDyn $ subRoute $ \case
-          DataServiceRoute_QueryService_PostgREST -> text "my DataServiceRoute_QueryService_PostgREST" >> return never
-          DataServiceRoute_QueryService_ElasticSearch -> text "my DataServiceRoute_QueryService_ElasticSearch" >> return never
-          DataServiceRoute_QueryService_HBase -> text "my DataServiceRoute_QueryService_HBase" >> return never
-          DataServiceRoute_QueryService_Kudu -> text "my DataServiceRoute_QueryService_Kudu" >> return never                
-          DataServiceRoute_FileService_MinIO -> text "my DataServiceRoute_FileService_MinIO" >> return never
-          DataServiceRoute_FileService_HDFS -> text "my DataServiceRoute_FileService_HDFS" >> return never
-          DataServiceRoute_FileService_SFtp -> dataService_sftp dataService_sftp_st
-          DataServiceRoute_NotifyService_WebHook -> text "my DataServiceRoute_NotifyService_WebHook" >> return never
-          DataServiceRoute_NotifyService_Email -> text "my DataServiceRoute_NotifyService_Email" >> return never
-
-handleWSRequest :: forall t m js.
-  ( DomBuilder t m, Prerender js m, MonadHold t m
-  , PerformEvent t m, TriggerEvent t m, PostBuild t m)
-  => T.Text -> Event t [WSRequestMessage] -> m (Event t WSResponseMessage)
-handleWSRequest wsURL wsRequests =
-  prerender (return never) $ do
-    ws <- webSocket wsURL $
-      def & webSocketConfig_send .~ ((fmap . fmap) J.encode wsRequests)
-    return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
-
-frontend :: Frontend (R FrontendRoute)
-frontend = Frontend
-  { _frontend_head = htmlHeader
-  , _frontend_body = do
-      (host, port, path) <- liftIO $ askWSInfo
-      let wsURL = "ws://" <> host <> ":" <> (cs . show) port <> path
-
-      pb <- getPostBuild
-      rec
-        wsResponseEvt <- handleWSRequest wsURL (leftmost [wsRequestEvt, [AppInitREQ] <$ pb])
-        wsRequestEvt <- do
-          appSTD <- foldDyn (\wsMsg st -> case wsMsg of
-                                (AppInitRES initAppST) -> initAppST
-                                _ -> st)
-                      defAppST wsResponseEvt
-          
-          divClass "ui message icon" $ do
-            elClass "i" "notched circle loading icon" blank
-            elClass "h1" "ui header" $
-              routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
-          divClass "ui grid" $ do
-            divClass "ui two wide column vertical menu visible compact" $ nav
-            divClass "ui fourteen wide column container" $ page appSTD wsResponseEvt
-      return ()
-  }
-
+        DataSandboxRoute_DataService -> subRoute_ $ \case
+          DataServiceRoute_QueryService_PostgREST -> text "my DataServiceRoute_QueryService_PostgREST"
+          DataServiceRoute_QueryService_ElasticSearch -> text "my DataServiceRoute_QueryService_ElasticSearch"
+          DataServiceRoute_QueryService_HBase -> text "my DataServiceRoute_QueryService_HBase"
+          DataServiceRoute_QueryService_Kudu -> text "my DataServiceRoute_QueryService_Kudu"
+          DataServiceRoute_FileService_MinIO -> text "my DataServiceRoute_FileService_MinIO"
+          DataServiceRoute_FileService_HDFS -> text "my DataServiceRoute_FileService_HDFS"
+          DataServiceRoute_FileService_SFtp -> void $ dataService_sftp undefined
+          DataServiceRoute_NotifyService_WebHook -> text "my DataServiceRoute_NotifyService_WebHook"
+          DataServiceRoute_NotifyService_Email -> text "my DataServiceRoute_NotifyService_Email"
