@@ -3,6 +3,7 @@
 
 module Frontend.Widget where
 
+import Common.WebSocketMessage
 import Prelude
 import Reflex.Dom.Core
 import qualified Data.Text as T
@@ -46,7 +47,7 @@ theadList xs = do
   return ()
 
 loginFormEB :: forall t m. (DomBuilder t m, PostBuild t m)
-  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Event t (T.Text, T.Text, T.Text))
+  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Event t Credential)
 loginFormEB hostD usernameD passwordD = do
   divClass "ui form compact" $ do
     divClass "fields" $ do
@@ -55,7 +56,7 @@ loginFormEB hostD usernameD passwordD = do
       passwordD' <- dynInputFieldDB "密码" passwordD
       divClass "field" $ do
         el "label" $ elClass "i" "angle double down icon" blank
-        submitEB "连接" <&> tagPromptlyDyn ((,,) <$> hostD' <*> usernameD' <*> passwordD') 
+        submitEB "连接" <&> tagPromptlyDyn (credential <$> hostD' <*> usernameD' <*> passwordD') 
   
 {--
 tbodyList :: forall t m .

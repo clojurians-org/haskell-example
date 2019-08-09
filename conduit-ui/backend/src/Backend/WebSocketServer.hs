@@ -53,6 +53,7 @@ wsConduitApp appST pending= do
   runConduit
     $ (forever $ liftIO (WS.receiveData conn) >>= yield . J.decode)
    .| CL.mapMaybe (id @(Maybe WSRequestMessage))
+--   .| C.iterM print
    .| C.mapM (wsHandle appST)
    .| C.mapM_ (WS.sendTextData conn . J.encode)
 
@@ -82,7 +83,9 @@ wsHandle appST = \case
 
 wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage
 wsHandle appST AppInitREQ = do
+  readMVar appST >>= putStrLn . ("INIT REQ" ++ ) . show
   return . AppInitRES =<< readMVar appST
+  
 wsHandle appST (HaskellCodeRunRequest r) =
   return . HaskellCodeRunResponse . mapLeft show =<<
     (I.runInterpreter . dynHaskell) r

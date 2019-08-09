@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Common.Types.DataSandbox where
 
@@ -17,7 +18,7 @@ import qualified Data.Tree as TR
 import Data.Default (Default(def))
 
 import Control.Applicative (liftA2)
-import Control.Lens ()
+import Control.Lens
 import Text.Heredoc (str)
 import Data.String.Conversions (cs)
 import qualified Data.HashMap.Lazy as M
@@ -144,6 +145,11 @@ data DataService = DSE_QueryService_PostgREST DSEQSPostgREST
   deriving (Generic, Show, Eq)
 instance J.ToJSON DataService
 instance J.FromJSON DataService
+
+_DSE_FileService_SFTP :: Prism DataService DataService DSEFSSFtp DSEFSSFtp
+_DSE_FileService_SFTP = prism DSE_FileService_SFTP $ \case
+    DSE_FileService_SFTP sftp -> Right sftp
+    x -> Left x
 
 getDataServiceId :: DataService -> Maybe Int64
 getDataServiceId (DSE_QueryService_PostgREST postgREST) =  dseqsPostgRESTXid postgREST

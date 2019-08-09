@@ -15,9 +15,39 @@ import qualified Data.Text as T
 import qualified Data.Tree as TR
 import Data.Default (Default(def))
 
+import Data.String.Conversions (cs)
 import Control.Applicative (liftA2)
-import Control.Lens ()
+import Control.Lens
+import Data.Bifunctor (bimap, first, second)
 
+import Data.Time.Clock (UTCTime)
+
+data Credential = Credential {
+    hostName :: T.Text
+  , hostPort :: Int
+  , username :: T.Text
+  , password :: T.Text
+  } deriving (Generic, Show)
+instance J.ToJSON Credential
+instance J.FromJSON Credential
+
+credential :: T.Text -> T.Text -> T.Text -> Credential
+credential host username password = do
+  let (hostName, hostPort) = second (read . cs . T.tail) $ T.breakOn ":" host
+  Credential hostName hostPort username password
+
+data SFtpEntryType = SFtpFille | SFtpDirectory deriving (Generic, Show)
+instance J.ToJSON SFtpEntryType
+instance J.FromJSON SFtpEntryType
+data SFtpEntry = SFtpEntry {
+    sftpEntryName :: T.Text
+  , sftpEntryParent:: [SFtpEntry]
+  , sftpEntryType :: SFtpEntryType
+  , sftpEntryCTime :: UTCTime
+  } deriving (Generic, Show)
+instance J.ToJSON SFtpEntry
+instance J.FromJSON SFtpEntry
+  
 data WSRequestMessage = AppInitREQ 
                     | HaskellCodeRunRequest T.Text
                     -- EventPulse
@@ -36,11 +66,15 @@ data WSRequestMessage = AppInitREQ
                     | DSOSQLCursorDREQ Int64
                     | DSOSQLCursorDatabaseRREQ T.Text
                     | DSOSQLCursorTableRREQ T.Text
+                    -- SFTP
+                    | DSEFSSFtpCREQ DSEFSSFtp
+                    | DSEFSSFtpFileRREQ Credential (Maybe T.Text)
   deriving (Generic, Show)
 instance J.ToJSON WSRequestMessage
 instance J.FromJSON WSRequestMessage
 
-data WSResponseMessage = AppInitRES AppST
+data WSResponseMessage = NeverRES
+                     | AppInitRES AppST
                      | HaskellCodeRunResponse (Either String ())
                      -- EventPulse
                      | EventPulseCRES (Either String EventPulse)

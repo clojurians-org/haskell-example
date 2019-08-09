@@ -24,6 +24,7 @@ module Frontend where
 import Common.Api
 import Common.Types
 import Common.WebSocketMessage
+import Frontend.FrontendStateT
 
 import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse_handle, dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
@@ -31,8 +32,7 @@ import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_hand
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
 import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
 import Frontend.Page.EventLake.CronTimer (eventLake_cronTimer_handle, eventLake_cronTimer)
-import Frontend.Page.DataSandbox.DataSource.SQLCursor (dataSource_sqlCursor_handle, dataSource_sqlCursor)
-import Frontend.Page.DataSandbox.DataService.FileService.SFTP (dataService_sftp_handle, dataService_sftp)
+import Frontend.Page.DataSandbox (dataService_sftp, dataSource_sqlCursor)
 
 import Prelude
 
@@ -152,47 +152,33 @@ nav = do
       divClass "item" $ text "报表开发器"
   
 frontend :: Frontend (R FrontendRoute)
-frontend = Frontend htmlHeader blank
+frontend = Frontend htmlHeader htmlBody
+{--
+  $ do
+  aE <- mapRoutedT (flip runFrontendStateT undefined . fmap snd . runEventWriterT) $ do
+    pbE <- getPostBuild
+    tellEvent ("aab" <$ pbE)
+    bE <- button "a"
+    tellEvent ("bb" <$ bE)
+  holdDyn "----" aE >>= display
+  return ()
+--}  
 
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
   elAttr "link" ( "rel" =: "stylesheet"
                <> "href" =: "https://cdn.jsdelivr.net/npm/semantic-ui@2.3.3/dist/semantic.min.css") blank
 
-type RoutedAppState t m = RoutedT t (R FrontendRoute) (AppState t m)
-newtype FrontendStateT (t :: * ) s m a = FrontendStateT
-  { unFrontendStateT :: ReaderT (Dynamic t s) m a }
-  deriving ( Functor, Applicative, Monad, MonadFix, MonadTrans, MonadIO
-           , MonadSample t, MonadHold t, PostBuild t, TriggerEvent t
-           , PerformEvent t, DomBuilder t, NotReady t)
-
-instance Adjustable t m => Adjustable t (FrontendStateT t s m) where
-  runWithReplace a0 a' = FrontendStateT $ runWithReplace (coerce a0) $ coerceEvent a'
-  traverseIntMapWithKeyWithAdjust f a0 a' = FrontendStateT $ traverseIntMapWithKeyWithAdjust (coerce f) (coerce a0) $ coerce a'
-  traverseDMapWithKeyWithAdjust f a0 a' = FrontendStateT $ traverseDMapWithKeyWithAdjust (\k v -> coerce $ f k v) (coerce a0) $ coerce a'
-  traverseDMapWithKeyWithAdjustWithMove f a0 a' = FrontendStateT $ traverseDMapWithKeyWithAdjustWithMove (\k v -> coerce $ f k v) (coerce a0) $ coerce a'
-
-instance (Monad m, RouteToUrl r m) => RouteToUrl r (FrontendStateT t s m) where
-  askRouteToUrl = lift askRouteToUrl
-instance (Monad m, SetRoute t r m) => SetRoute t r (FrontendStateT t s m) where
-  setRoute = lift . setRoute
-  modifyRoute = lift . modifyRoute
-
-type AppState t m = EventWriterT t [WSRequestMessage] (FrontendStateT t (FaaSCenter, Event t WSResponseMessage) m)
-
-runFrontendStateT :: FrontendStateT t s m a -> Dynamic t s -> m a
-runFrontendStateT t = runReaderT (unFrontendStateT t)
+type AppState t m = EventWriterT t [WSRequestMessage] (FrontendStateT t (FaaSCenter, WSResponseMessage) m)
   
 htmlBody :: forall js t m. ObeliskWidget js t (R FrontendRoute) m
   => RoutedT t (R FrontendRoute) m ()
 htmlBody = mapRoutedT unraverlAppState $ do
-  text "hello world"
-  pb <- getPostBuild
-  tellEvent ([AppInitREQ] <$ pb)
   divClass "ui message icon" $ do
-    elClass "i" "notched circle loading icon" $ do
-        elClass "h1" "ui header" $
-          routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台" 
+    elClass "i" "notched circle loading icon" $ blank
+    elClass "h1" "ui header" $
+      routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台"
+
   divClass "ui grid" $ do
     divClass "ui two wide column vertical menu visible compact" $ nav
     divClass "ui fourteen wide column container" page
@@ -200,31 +186,34 @@ htmlBody = mapRoutedT unraverlAppState $ do
   where
     unraverlAppState :: AppState t m () -> m ()
     unraverlAppState m = mdo
-      appD <- foldDyn appEndo (defAppST, never) (updateGlobal wsRES)
-      wsRES <- do
-        wsREQs <- flip runFrontendStateT appD $ runEventWriterT m <&> snd
-        let wsURL = "ws://localhost:8000/wsConduit"
-        handleWSRequest wsURL wsREQs
+      let wsURL = "ws://10.132.37.200:8000/wsConduit"
+      appD <- foldDyn appEndo (defAppST, NeverRES) (updateGlobal <$> wsRES)
+      wsREQ <- flip runFrontendStateT appD $ runEventWriterT m <&> snd
+      wsRES <- handleWSRequest wsURL wsREQ      
       pure ()
 
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js t m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m)
   => T.Text -> Event t [WSRequestMessage] -> m (Event t WSResponseMessage)
-handleWSRequest wsURL wsRequests =
+handleWSRequest wsURL wsRequests = do
   fmap switchDyn . prerender (return never) $ do
+    pbE <- getPostBuild
     ws <- webSocket wsURL $
-      def & webSocketConfig_send .~ ((fmap . fmap) J.encode wsRequests)
+      def & webSocketConfig_send .~ ((fmap . fmap) J.encode (leftmost [wsRequests, [AppInitREQ] <$ pbE]))
     return $ fmap (fromJust . J.decode . cs) (_webSocket_recv ws)
 
-updateGlobal :: forall t. Event t WSResponseMessage -> Endo (FaaSCenter, Event t WSResponseMessage)
+updateGlobal :: WSResponseMessage -> Endo (FaaSCenter, WSResponseMessage)
 updateGlobal = \case
-  msg@(AppInitRES state0) -> Endo $ const (undefined, msg)
+  msg@(AppInitRES state0) -> Endo $ const (state0, msg)
+  _ -> mempty
 
 page :: forall t js m.
   ( DomBuilder t m --, Prerender js m
   , MonadFix m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m
+  , HasFrontendState t (FaaSCenter, WSResponseMessage) m
+  , EventWriter t [WSRequestMessage] m
   )
   => RoutedT t (R FrontendRoute) m ()
 page = do
@@ -238,7 +227,6 @@ page = do
   eventLake_cronTimer_st <- eventLake_cronTimer_handle wsSTNotUsed wsResponseEvt
   
   dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsSTNotUsed wsResponseEvt
-  dataService_sftp_st <- dataService_sftp_handle stD wsResponseEvt
   --}
   subRoute_ $ \case
       FrontendRoute_Main -> text "my main"
@@ -270,6 +258,6 @@ page = do
           DataServiceRoute_QueryService_Kudu -> text "my DataServiceRoute_QueryService_Kudu"
           DataServiceRoute_FileService_MinIO -> text "my DataServiceRoute_FileService_MinIO"
           DataServiceRoute_FileService_HDFS -> text "my DataServiceRoute_FileService_HDFS"
-          DataServiceRoute_FileService_SFtp -> void $ dataService_sftp undefined
+          DataServiceRoute_FileService_SFtp -> dataService_sftp
           DataServiceRoute_NotifyService_WebHook -> text "my DataServiceRoute_NotifyService_WebHook"
           DataServiceRoute_NotifyService_Email -> text "my DataServiceRoute_NotifyService_Email"
