@@ -61,7 +61,13 @@ dataService_sftp = do
 
   divClass "ui segment basic" $ do
     divClass "ui top attached segment" $ do
-      elClass "h4" "ui header" $ text "文件浏览器"
+--      elClass "h4" "ui header" $ text "文件浏览器"
+      divClass "ui breadcrumb" $ do
+        elClass "a" "section" $ text "."
+        elClass "i"  "right chevron icon divider" $ blank
+        elClass "a" "section" $ text "xxx"
+        elClass "i" "right arrow icon divider" $ blank
+        divClass "active section" $ text "aaa.txt"
     divClass "ui attached segment" $
       divClass "ui form field" $ do
         blank

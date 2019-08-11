@@ -26,7 +26,7 @@ import Common.Types
 import Common.WebSocketMessage
 import Frontend.FrontendStateT
 
-import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse_handle, dataNetwork_eventPulse)
+import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
@@ -173,25 +173,27 @@ type AppState t m = EventWriterT t [WSRequestMessage] (FrontendStateT t (FaaSCen
   
 htmlBody :: forall js t m. ObeliskWidget js t (R FrontendRoute) m
   => RoutedT t (R FrontendRoute) m ()
-htmlBody = mapRoutedT unraverlAppState $ do
-  divClass "ui message icon" $ do
-    elClass "i" "notched circle loading icon" $ blank
-    elClass "h1" "ui header" $
-      routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台"
-
-  divClass "ui grid" $ do
-    divClass "ui two wide column vertical menu visible compact" $ nav
-    divClass "ui fourteen wide column container" page
-  return ()
+htmlBody =  do
+  let (hostname, port, path)  = askWSInfoPure
+      wsURL = "ws://" <> hostname <> ":" <> (cs . show $ port) <> path
+  mapRoutedT (unraverlAppState wsURL) $ do
+    divClass "ui message icon" $ do
+      elClass "i" "notched circle loading icon" $ blank
+      elClass "h1" "ui header" $
+        routeLink (FrontendRoute_Main :/ ()) $ text "实时数据中台"
+    
+    divClass "ui grid" $ do
+      divClass "ui two wide column vertical menu visible compact" $ nav
+      divClass "ui fourteen wide column container" page
+    return ()
   where
-    unraverlAppState :: AppState t m () -> m ()
-    unraverlAppState m = mdo
-      let wsURL = "ws://10.132.37.200:8000/wsConduit"
-      appD <- foldDyn appEndo (defAppST, NeverRES) (updateGlobal <$> wsRES)
-      wsREQ <- flip runFrontendStateT appD $ runEventWriterT m <&> snd
-      wsRES <- handleWSRequest wsURL wsREQ      
-      pure ()
-
+      unraverlAppState :: T.Text -> AppState t m () -> m ()
+      unraverlAppState wsURL m = mdo
+        appD <- foldDyn appEndo (defAppST, NeverRES) (updateGlobal <$> wsRES)
+        wsREQ <- flip runFrontendStateT appD $ runEventWriterT m <&> snd
+        wsRES <- handleWSRequest wsURL wsREQ      
+        pure ()
+    
 handleWSRequest :: forall t m js.
   ( DomBuilder t m, Prerender js t m, MonadHold t m
   , PerformEvent t m, TriggerEvent t m, PostBuild t m)
@@ -217,21 +219,10 @@ page :: forall t js m.
   )
   => RoutedT t (R FrontendRoute) m ()
 page = do
-      {--
-  dataNetwork_eventPulse_st <- dataNetwork_eventPulse_handle wsSTNotUsed wsResponseEvt
-  dataNetwork_effectEngine_st <- dataNetwork_effectEngine_handle wsSTNotUsed wsResponseEvt
-  dataNetwork_logicFragement_st <- dataNetwork_logicFragement_handle wsSTNotUsed wsResponseEvt
-  dataNetwork_dataConduit_st <- dataNetwork_dataConduit_handle wsSTNotUsed wsResponseEvt
-  dataNetwork_dataCircuit_st <- dataNetwork_dataCircuit_handle wsSTNotUsed wsResponseEvt
-  
-  eventLake_cronTimer_st <- eventLake_cronTimer_handle wsSTNotUsed wsResponseEvt
-  
-  dataSource_sqlCursor_st <- dataSource_sqlCursor_handle wsSTNotUsed wsResponseEvt
-  --}
   subRoute_ $ \case
       FrontendRoute_Main -> text "my main"
       FrontendRoute_DataNetwork -> subRoute_ $ \case
-        DataNetworkRoute_EventPulse -> void $ dataNetwork_eventPulse undefined
+        DataNetworkRoute_EventPulse -> dataNetwork_eventPulse
         DataNetworkRoute_EffectEngine -> void $ dataNetwork_effectEngine undefined
         DataNetworkRoute_LogicFragement -> void $ dataNetwork_logicFragement undefined
         DataNetworkRoute_DataConduit ->  void $ dataNetwork_dataConduit undefined

@@ -8,6 +8,7 @@
 module Frontend.Page.DataNetwork.EventPulse
   (dataNetwork_eventPulse_handle, dataNetwork_eventPulse) where
 
+import Frontend.FrontendStateT
 import Common.WebSocketMessage
 import Common.Types
 import Common.ExampleData
@@ -24,6 +25,8 @@ import Data.String.Conversions (cs)
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Concurrent (MVar, newMVar, putMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
+import Control.Lens hiding (lens)
+import Labels
 
 dataNetwork_eventPulse_handle
   :: forall t m r.
@@ -167,10 +170,13 @@ tbodySecondUI wsDyn = do
 
 dataNetwork_eventPulse
   :: forall t m .
-     (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => (Event t WSResponseMessage, Dynamic t [EventPulse])
-  -> m (Event t [WSRequestMessage])
-dataNetwork_eventPulse (wsEvt, wsDyn) = do
+     ( DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m
+     , HasFrontendState t (FaaSCenter, WSResponseMessage) m)
+  =>  m ()
+dataNetwork_eventPulse = do
+  st :: Dynamic t (FaaSCenter, WSResponseMessage) <- askFrontendState
+  let epsD = st <&> (^.. _1 . lens #dataNetwork . lens #eventPulses . each)
+  
   divClass "ui segment basic" $
     divClass "ui grid" $ divClass "eight wide column" $ divClass "ui message" $ do
       elClass "h2" "ui header" $ text "事件脉冲"
@@ -179,7 +185,7 @@ dataNetwork_eventPulse (wsEvt, wsDyn) = do
         el "li" $ elClass "h4" "ui header" $ text "事件脉冲激活数据电路"
 
   divClass "ui segment basic" $ do
-    elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI wsDyn
+    elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI epsD
   divClass "ui hidden divider" blank
   divClass "ui segment basic" $ do
     elClass "table" "ui blue selectable table" $ theadSecondUI >> tbodySecondUI (constDyn exampleDataCircuitValues)
@@ -208,7 +214,7 @@ dataNetwork_eventPulse (wsEvt, wsDyn) = do
         divClass "ui message" $ do
 --          divClass "header" $ text "运行结果"
           text ""
-  return never
+  return ()
 
 
 

@@ -41,12 +41,13 @@ instance J.ToJSON SFtpEntryType
 instance J.FromJSON SFtpEntryType
 data SFtpEntry = SFtpEntry {
     sftpEntryName :: T.Text
-  , sftpEntryParent:: [SFtpEntry]
   , sftpEntryType :: SFtpEntryType
   , sftpEntryCTime :: UTCTime
   } deriving (Generic, Show)
 instance J.ToJSON SFtpEntry
 instance J.FromJSON SFtpEntry
+
+type SftpPath = TR.Tree SFtpEntry
   
 data WSRequestMessage = AppInitREQ 
                     | HaskellCodeRunRequest T.Text
