@@ -18,6 +18,10 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Either.Combinators (mapLeft, maybeToLeft, maybeToRight)
 import System.Random (randomRIO)
 
+import Data.Maybe (fromMaybe)
+import Data.Functor ((<&>))
+
+import Control.Exception (bracket)
 import GHC.Int (Int64)
 import Data.String (IsString(..))
 import qualified Data.Text as T
@@ -41,6 +45,20 @@ import Labels (lens)
 import Control.Monad.Except (runExceptT, liftEither)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, ExceptT(..), except)
+
+import Data.Bits (Bits(..))
+import Foreign.C.Types (CULong)
+
+import Network.SSH.Client.LibSSH2
+  ( Sftp, Session, sessionInit, sessionClose
+  , checkHost
+  , withSFTPUser, withOpenSftpFile, sftpListDir)
+import Network.SSH.Client.LibSSH2.Foreign
+  ( SftpFileTransferFlags(..), KnownHostResult(..)
+  , SftpAttributes(..)
+  , usernamePasswordAuth, sftpInit, sftpShutdown
+  , sftpOpenFile, sftpCloseHandle, sftpWriteFileFromBS)
+
 
 serveWebSocket :: MonadSnap m => MVar AppST ->  m ()
 serveWebSocket appST = runWebSocketsSnap (wsConduitApp appST)
@@ -99,7 +117,23 @@ wsHandle appST (EventPulseAREQ name) = do
     eventPulse <- liftEither $ (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
     ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder faas) eventPulse
   (return . EventPulseARES . mapLeft show) evalResult
-  
+
+wsHandle appST (DSEFSSFtpFileRREQ (Credential hostName hostPort username password) path) = do
+  bracket (sessionInit (cs hostName) hostPort) sessionClose $ \s -> do
+    liftIO $ usernamePasswordAuth s (cs username) (cs password)
+    bracket (sftpInit s) sftpShutdown $ \sftp -> do
+      sftpList <- sftpListDir sftp (cs $ fromMaybe "." path)
+      return . DSEFSSFtpFileRRES . Right $ sftpList <&> \(name, attrs) -> do
+        let size = (fromIntegral . saFileSize) attrs
+            ctime = (realToFrac . saMtime) attrs
+            xtype = (parseSFtpEntryType . saPermissions) attrs
+        SFtpEntry (cs name) xtype size ctime
+  where
+    parseSFtpEntryType ::  CULong -> SFtpEntryType
+    parseSFtpEntryType = \case
+      a | a .&. 0o0100000 /= 0 -> SFtpFille
+        | a .&. 0o0040000 /= 0 -> SFtpDirectory
+      _ -> SFtpUnknown        
 wsHandle appST unknown = do
   putStrLn $ "CronTimerDeleteResponse: " ++ (show unknown)
   return . WSResponseUnknown $ unknown
@@ -115,8 +149,14 @@ dynHaskell stmt = do
   I.runStmt (cs stmt)
 
 
+
+
 replRun :: IO ()
 replRun = do
+  {--
   let code = toHaskellCode . toHaskellCodeBuilder exampleFaasCenter $ (head exampleEventPulses)
   T.putStrLn code
   (mapLeft show <$> (I.runInterpreter . dynHaskell) code) >>= print
+  --}
+  wsHandle undefined
+    (DSEFSSFtpFileRREQ (Credential "10.132.37.201" 22 "op" "op") (Just ".")) >>= print

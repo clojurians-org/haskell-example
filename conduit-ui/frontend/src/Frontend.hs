@@ -208,6 +208,7 @@ handleWSRequest wsURL wsRequests = do
 updateGlobal :: WSResponseMessage -> Endo (FaaSCenter, WSResponseMessage)
 updateGlobal = \case
   msg@(AppInitRES state0) -> Endo $ const (state0, msg)
+  msg@(DSEFSSFtpFileRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)
   _ -> mempty
 
 page :: forall t js m.

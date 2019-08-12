@@ -6,7 +6,7 @@ module Common.Api where
 import Prelude
 import qualified Data.Text as T
 import Data.FileEmbed (embedFile)
-import Obelisk.ExecutableConfig.Lookup (getConfigs)
+-- import Obelisk.ExecutableConfig.Lookup (getConfigs)
 
 import Data.Maybe (fromJust, maybe)
 import Data.Functor ((<&>))

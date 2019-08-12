@@ -39,10 +39,13 @@ dataService_sftp
      , EventWriter t [WSRequestMessage] m)
   => m ()
 dataService_sftp = do
-  st :: Dynamic t (FaaSCenter, WSResponseMessage) <- askFrontendState
-  let sftpsD = st <&> (^.. _1 . lens #dataSandbox . lens #dataServices . each. _DSE_FileService_SFTP)
-
-  dynText (cs . show <$> sftpsD)
+  (stD, msgD) :: (Dynamic t FaaSCenter, Dynamic t WSResponseMessage) <- splitDynPure <$> askFrontendState
+  let  sftpsD = stD <&> (^.. lens #dataSandbox . lens #dataServices . each. _DSE_FileService_SFTP)
+       fileRE = fforMaybe (updated msgD) $ \case
+        DSEFSSFtpFileRRES (Right r) ->  Just r
+        _ -> Nothing
+  fileRD <- holdDyn [] fileRE
+--  dynText (cs . show <$> msgD)
   divClass "ui segment basic" $ do
     pageHeader "SFTP文件服务" ["实时写入", "支持CSV与JSON格式"]
 
@@ -54,22 +57,22 @@ dataService_sftp = do
     submitE <- loginFormEB (dsefsSFtpHost <$> sftpD) (dsefsSFtpUsername <$> sftpD) (dsefsSFtpPassword <$> sftpD)
 
     tellEvent (submitE <&> (:[]). flip DSEFSSFtpFileRREQ Nothing)
-
---    submitD <- holdDyn (credential "host" "username" "password") submitE
---    display submitD
---    tellEvent 
-
+    
   divClass "ui segment basic" $ do
     divClass "ui top attached segment" $ do
 --      elClass "h4" "ui header" $ text "文件浏览器"
       divClass "ui breadcrumb" $ do
         elClass "a" "section" $ text "."
-        elClass "i"  "right chevron icon divider" $ blank
+--        elClass "i"  "right chevron icon divider" $ blank
+        elClass "i"  "divider" $ text "/"
         elClass "a" "section" $ text "xxx"
         elClass "i" "right arrow icon divider" $ blank
         divClass "active section" $ text "aaa.txt"
-    divClass "ui attached segment" $
-      divClass "ui form field" $ do
-        blank
+    divClass "ui attached segment ui table" $
+      el "tbody" $ do
+        simpleList fileRD $ \f -> el "tr" $ do
+          el "td" $ dynText (sftpEntryName <$> f)
+          el "td" $ dynText (cs . show . sftpEntrySize <$> f)
+          el "td" $ dynText (cs . show . sftpEntryCTime <$> f)
     
   return ()

@@ -21,6 +21,7 @@ import Control.Lens
 import Data.Bifunctor (bimap, first, second)
 
 import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (POSIXTime)
 
 data Credential = Credential {
     hostName :: T.Text
@@ -33,22 +34,22 @@ instance J.FromJSON Credential
 
 credential :: T.Text -> T.Text -> T.Text -> Credential
 credential host username password = do
-  let (hostName, hostPort) = second (read . cs . T.tail) $ T.breakOn ":" host
+  let (hostName, xs) = T.breakOn ":" host
+      hostPort = if (T.null xs) then 22 else (read . cs . T.tail) xs
   Credential hostName hostPort username password
 
-data SFtpEntryType = SFtpFille | SFtpDirectory deriving (Generic, Show)
+data SFtpEntryType = SFtpFille | SFtpDirectory | SFtpUnknown deriving (Generic, Show)
 instance J.ToJSON SFtpEntryType
 instance J.FromJSON SFtpEntryType
 data SFtpEntry = SFtpEntry {
     sftpEntryName :: T.Text
   , sftpEntryType :: SFtpEntryType
-  , sftpEntryCTime :: UTCTime
+  , sftpEntrySize :: Int
+  , sftpEntryCTime :: POSIXTime
   } deriving (Generic, Show)
 instance J.ToJSON SFtpEntry
 instance J.FromJSON SFtpEntry
 
-type SftpPath = TR.Tree SFtpEntry
-  
 data WSRequestMessage = AppInitREQ 
                     | HaskellCodeRunRequest T.Text
                     -- EventPulse
@@ -94,6 +95,9 @@ data WSResponseMessage = NeverRES
                      | DSOSQLCursorDRES (Either String Int64)
                      | DSOSQLCursorDatabaseRRES (Either String T.Text)
                      | DSOSQLCursorTableRRES (Either String T.Text)
+
+                    -- SFTP
+                     | DSEFSSFtpFileRRES (Either String [SFtpEntry])
                      
                      -- Unkown
                      | WSResponseUnknown WSRequestMessage
