@@ -12,6 +12,7 @@ library
                , data-default
                , lens
                , file-embed
+               , byteunits
   default-extensions:
     TypeFamilies
     PolyKinds

@@ -13,10 +13,13 @@ import Control.Monad.Fix (MonadFix)
 import Data.Functor ((<&>))
 import Data.Semigroup (stimes)
 
+buttonClass :: forall t m. (DomBuilder t m, PostBuild t m)
+  => T.Text -> m () -> m (Event t ())
+buttonClass cls s = elClass' "button" cls s <&> void . domEvent Click . fst
+
 submitEB :: forall t m. (DomBuilder t m, PostBuild t m)
   => T.Text -> m (Event t ())
-submitEB s = elClass' "button" "ui button teal" (text s)
-              <&> void . domEvent Click . fst
+submitEB = buttonClass "ui button teal" . text
             
 dynInputDB :: forall t m. (DomBuilder t m, PostBuild t m)
   => Dynamic t T.Text -> m (Dynamic t T.Text)

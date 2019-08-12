@@ -9,11 +9,13 @@
 module Frontend.Page.DataSandbox.DataService.FileService.SFTP
   (dataService_sftp) where
 
+import Common.Api
 import Common.Types
 import Common.WebSocketMessage
 import Frontend.FrontendStateT
 import Frontend.Class
 import Prelude
+import Data.List (sortOn)
 
 import GHC.Int (Int64)
 import qualified Data.HashMap.Lazy as M
@@ -30,6 +32,7 @@ import Frontend.Widget
 import Control.Lens hiding (lens)
 import Labels
 
+import Control.Applicative (liftA2)
 import Data.Maybe (mapMaybe)
 
 dataService_sftp
@@ -61,18 +64,35 @@ dataService_sftp = do
   divClass "ui segment basic" $ do
     divClass "ui top attached segment" $ do
 --      elClass "h4" "ui header" $ text "文件浏览器"
-      divClass "ui breadcrumb" $ do
-        elClass "a" "section" $ text "."
---        elClass "i"  "right chevron icon divider" $ blank
-        elClass "i"  "divider" $ text "/"
-        elClass "a" "section" $ text "xxx"
-        elClass "i" "right arrow icon divider" $ blank
-        divClass "active section" $ text "aaa.txt"
+      divClass "ui horizontal divided list" $ do
+        divClass "item" $ divClass "ui small basic icon buttons" $ do
+          buttonClass "ui icon button" $ elClass "i" "home icon" blank
+          buttonClass "ui icon button" $ elClass "i" "umbrella icon" blank
+        divClass "item" $ do
+          divClass "ui right pointing basic label" $ text "文件路径"
+--        divClass "item" $
+          divClass "ui breadcrumb" $ do
+
+--            elClass "i"  "right chevron icon divider" $ blank
+            divClass "ui input" $ inputElement def
+            {--
+            elClass "a" "section" $ text "."
+            elClass "i"  "divider" $ text "/"
+            elClass "a" "section" $ text "xxx"
+            --}
+            elClass "i" "right arrow icon divider" $ blank
+            divClass "ui input" $ dynInputDB (constDyn "aaa.txt")
+--            divClass "active section" $ text "aaa.txt"
     divClass "ui attached segment ui table" $
       el "tbody" $ do
-        simpleList fileRD $ \f -> el "tr" $ do
-          el "td" $ dynText (sftpEntryName <$> f)
-          el "td" $ dynText (cs . show . sftpEntrySize <$> f)
-          el "td" $ dynText (cs . show . sftpEntryCTime <$> f)
+        simpleList (fileRD <&> sortOn (liftA2 (,) sftpEntryType sftpEntryName)) $ \f -> el "tr" $ do
+          el "td" $ do
+            flip (elDynClass "i") blank $ f <&> (\case
+                SFtpFille -> "file icon"
+                SFtpDirectory -> "folder icon"
+                SFtpUnknown -> "") . sftpEntryType
+            dynText (sftpEntryName <$> f)
+          el "td" $ dynText (formatByteSize . fromIntegral . sftpEntrySize <$> f)
+          el "td" $ dynText (iso8601TimeFormat . sftpEntryCTime <$> f)
     
   return ()

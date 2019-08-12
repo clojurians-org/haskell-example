@@ -38,7 +38,7 @@ credential host username password = do
       hostPort = if (T.null xs) then 22 else (read . cs . T.tail) xs
   Credential hostName hostPort username password
 
-data SFtpEntryType = SFtpFille | SFtpDirectory | SFtpUnknown deriving (Generic, Show)
+data SFtpEntryType = SFtpDirectory | SFtpFille | SFtpUnknown deriving (Generic, Show, Eq, Ord)
 instance J.ToJSON SFtpEntryType
 instance J.FromJSON SFtpEntryType
 data SFtpEntry = SFtpEntry {
