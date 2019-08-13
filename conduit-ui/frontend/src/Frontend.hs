@@ -30,7 +30,7 @@ import Frontend.Page.DataNetwork.EventPulse (dataNetwork_eventPulse)
 import Frontend.Page.DataNetwork.EffectEngine (dataNetwork_effectEngine_handle, dataNetwork_effectEngine)
 import Frontend.Page.DataNetwork.LogicFragement (dataNetwork_logicFragement_handle, dataNetwork_logicFragement)
 import Frontend.Page.DataNetwork.DataConduit (dataNetwork_dataConduit_handle, dataNetwork_dataConduit)
-import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit)
+import Frontend.Page.DataNetwork.DataCircuit (dataNetwork_dataCircuit)
 import Frontend.Page.EventLake.CronTimer (eventLake_cronTimer_handle, eventLake_cronTimer)
 import Frontend.Page.DataSandbox (dataService_sftp, dataSource_sqlCursor)
 

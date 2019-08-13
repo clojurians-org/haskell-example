@@ -10,6 +10,7 @@ import Common.Class
 import Common.Types
 import Common.WebSocketMessage
 import Common.ExampleData
+import Backend.Streaming
 import Prelude
 import Text.Heredoc (str)
 

@@ -27,6 +27,7 @@ library
     , mtl
     , resourcet
     , conduit
+    , monad-loops
     , hint
     , hasql
     , stm-chans

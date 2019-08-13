@@ -7,7 +7,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Frontend.Page.DataNetwork.DataCircuit
-  (dataNetwork_dataCircuit_handle, dataNetwork_dataCircuit) where
+  (dataNetwork_dataCircuit) where
 
 import Common.Types.DataNetwork
 import Common.Types.DataSandbox
