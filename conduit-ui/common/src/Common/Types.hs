@@ -6,7 +6,7 @@
 
 module Common.Types
   ( module X, FaaSCenter, AppST, defAppST
-  , Credential(..)
+  , Credential(..), credential
   ) where
 
 import Common.Types.DataNetwork as X

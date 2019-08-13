@@ -4,6 +4,7 @@
 
 module Frontend.Widget where
 
+import Common.Types
 import Common.WebSocketMessage
 import Prelude
 import Reflex.Dom.Core
