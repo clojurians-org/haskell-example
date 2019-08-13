@@ -62,7 +62,8 @@ exampleDataServices = do
                               , dsefsSFtpHost = "10.132.37.200:22"
                               , dsefsSFtpUsername = "op"
                               , dsefsSFtpPassword = "op"
-                              , dsefsSFtpFilePath = "./aaa.txt"
+                              , dsefsSFtpFilePath = "./"
+                              , dsefsSFtpFilePattern = "larluo.txt"
                               , dsefsSFtpXid = (Just 1)
                               })
     ]

@@ -17,6 +17,7 @@ project ./. ({ pkgs, hackGet, ... }: {
   packages = {
     labels-json = hackGet ./dep/labels-json ;
     hlibssh2 = hackGet ./dep/libssh2-hs/hlibssh2 ;
+    odpic-raw = hackGet ./dep/odpic-raw ;
   } ;
   overrides = self: super: {
     servant = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.doJailbreak (self.callCabal2nix "servant"

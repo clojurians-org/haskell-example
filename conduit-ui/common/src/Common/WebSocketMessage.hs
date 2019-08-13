@@ -23,20 +23,14 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime)
 
-data Credential = Credential {
-    hostName :: T.Text
-  , hostPort :: Int
-  , username :: T.Text
-  , password :: T.Text
+data TableEntry = TableEntry {
+    sqlEntryName :: T.Text
+  , sqlEntrySchemaName :: T.Text
+  , sqlEntrySize :: T.Text
+  , sqlEntryCTime :: POSIXTime
   } deriving (Generic, Show)
-instance J.ToJSON Credential
-instance J.FromJSON Credential
-
-credential :: T.Text -> T.Text -> T.Text -> Credential
-credential host username password = do
-  let (hostName, xs) = T.breakOn ":" host
-      hostPort = if (T.null xs) then 22 else (read . cs . T.tail) xs
-  Credential hostName hostPort username password
+instance J.ToJSON TableEntry
+instance J.FromJSON TableEntry
 
 data SFtpEntryType = SFtpDirectory | SFtpFille | SFtpUnknown deriving (Generic, Show, Eq, Ord)
 instance J.ToJSON SFtpEntryType
@@ -66,11 +60,11 @@ data WSRequestMessage = AppInitREQ
                     | DSOSQLCursorRREQ Int64
                     | DSOSQLCursorUREQ DSOSQLCursor
                     | DSOSQLCursorDREQ Int64
-                    | DSOSQLCursorDatabaseRREQ T.Text
-                    | DSOSQLCursorTableRREQ T.Text
+                    | DSOSQLCursorDatabaseRREQ Credential T.Text (Maybe T.Text)
+                    | DSOSQLCursorTableRREQ Credential T.Text (Maybe T.Text)
                     -- SFTP
                     | DSEFSSFtpCREQ DSEFSSFtp
-                    | DSEFSSFtpFileRREQ Credential (Maybe T.Text)
+                    | DSEFSSFtpDirectoryRREQ Credential (Maybe T.Text)
   deriving (Generic, Show)
 instance J.ToJSON WSRequestMessage
 instance J.FromJSON WSRequestMessage
@@ -93,11 +87,11 @@ data WSResponseMessage = NeverRES
                      | DSOSQLCursorRRES (Either String DSOSQLCursor)
                      | DSOSQLCursorURES (Either String DSOSQLCursor)
                      | DSOSQLCursorDRES (Either String Int64)
-                     | DSOSQLCursorDatabaseRRES (Either String T.Text)
+                     | DSOSQLCursorDatabaseRRES (Either String [TableEntry])
                      | DSOSQLCursorTableRRES (Either String T.Text)
 
                     -- SFTP
-                     | DSEFSSFtpFileRRES (Either String [SFtpEntry])
+                     | DSEFSSFtpDirectoryRRES (Either String [SFtpEntry])
                      
                      -- Unkown
                      | WSResponseUnknown WSRequestMessage

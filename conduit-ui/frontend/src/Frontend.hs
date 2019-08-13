@@ -153,16 +153,6 @@ nav = do
   
 frontend :: Frontend (R FrontendRoute)
 frontend = Frontend htmlHeader htmlBody
-{--
-  $ do
-  aE <- mapRoutedT (flip runFrontendStateT undefined . fmap snd . runEventWriterT) $ do
-    pbE <- getPostBuild
-    tellEvent ("aab" <$ pbE)
-    bE <- button "a"
-    tellEvent ("bb" <$ bE)
-  holdDyn "----" aE >>= display
-  return ()
---}  
 
 htmlHeader :: DomBuilder t m => m ()
 htmlHeader = do
@@ -208,7 +198,7 @@ handleWSRequest wsURL wsRequests = do
 updateGlobal :: WSResponseMessage -> Endo (FaaSCenter, WSResponseMessage)
 updateGlobal = \case
   msg@(AppInitRES state0) -> Endo $ const (state0, msg)
-  msg@(DSEFSSFtpFileRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)
+  msg@(DSEFSSFtpDirectoryRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)
   _ -> mempty
 
 page :: forall t js m.
@@ -240,7 +230,7 @@ page = do
           DataSourceRoute_Kafka -> text "my DataSourceRoute_Kafka"
           DataSourceRoute_WebSocket -> text "my DataSourceRoute_WebSocket"
           DataSourceRoute_RestAPI -> text "my DataSourceRoute_RestAPI"
-          DataSourceRoute_SQLCursor -> void $ dataSource_sqlCursor undefined
+          DataSourceRoute_SQLCursor -> dataSource_sqlCursor
           DataSourceRoute_MinIO -> text "my DataSourceRoute_MinIO"
 
         DataSandboxRoute_DataService -> subRoute_ $ \case

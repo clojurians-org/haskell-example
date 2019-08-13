@@ -41,6 +41,7 @@ library
     , regex-tdfa
     , minio-hs
     , hlibssh2
+    , odpic-raw
 
   exposed-modules:
     Backend

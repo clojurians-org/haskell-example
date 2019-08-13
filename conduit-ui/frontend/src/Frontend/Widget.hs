@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Frontend.Widget where
 
@@ -13,6 +14,11 @@ import Control.Monad.Fix (MonadFix)
 import Data.Functor ((<&>))
 import Data.Semigroup (stimes)
 
+
+tellEventSingle :: forall t m a. (EventWriter t [a] m, Reflex t)
+  => Event t a -> m ()
+tellEventSingle x = tellEvent (fmap (:[]) x)
+  
 buttonClass :: forall t m. (DomBuilder t m, PostBuild t m)
   => T.Text -> m () -> m (Event t ())
 buttonClass cls s = elClass' "button" cls s <&> void . domEvent Click . fst
@@ -20,13 +26,28 @@ buttonClass cls s = elClass' "button" cls s <&> void . domEvent Click . fst
 submitEB :: forall t m. (DomBuilder t m, PostBuild t m)
   => T.Text -> m (Event t ())
 submitEB = buttonClass "ui button teal" . text
-            
+
+dynInputB :: forall t m. (DomBuilder t m, PostBuild t m)
+  =>  Dynamic t T.Text -> m (Dynamic t T.Text, Event t T.Text)
+dynInputB sD = do
+  pb <- getPostBuild
+  inputDOM <- inputElement $ def & inputElementConfig_setValue .~ leftmost [ updated sD, tag (current sD) pb ]
+  return (value inputDOM, tagPromptlyDyn (value inputDOM) (keypress Enter inputDOM))
+  
+
 dynInputDB :: forall t m. (DomBuilder t m, PostBuild t m)
   => Dynamic t T.Text -> m (Dynamic t T.Text)
-dynInputDB sD = do
-  pb <- getPostBuild
-  (inputElement $ def & inputElementConfig_setValue .~ leftmost [ updated sD, tag (current sD) pb ])
-    <&> value
+dynInputDB = fmap fst . dynInputB 
+
+dynInputEB :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> m (Event t T.Text)
+dynInputEB = fmap snd . dynInputB
+
+{--
+dynInput :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> m ()
+dynInput = void . dynInputB
+--}
   
 dynInputFieldDB :: forall t m. (DomBuilder t m, PostBuild t m)
   => T.Text -> (Dynamic t T.Text) -> m (Dynamic t T.Text)
@@ -49,9 +70,9 @@ theadList xs = do
     forM xs (elClass "th" "" . text)
   return ()
 
-loginFormEB :: forall t m. (DomBuilder t m, PostBuild t m)
-  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Event t Credential)
-loginFormEB hostD usernameD passwordD = do
+loginFormB :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Dynamic t Credential, Event t Credential)
+loginFormB hostD usernameD passwordD = do
   divClass "ui form compact" $ do
     divClass "fields" $ do
       hostD' <- dynInputFieldDB "主机" hostD
@@ -59,7 +80,18 @@ loginFormEB hostD usernameD passwordD = do
       passwordD' <- dynInputFieldDB "密码" passwordD
       divClass "field" $ do
         el "label" $ elClass "i" "angle double down icon" blank
-        submitEB "连接" <&> tagPromptlyDyn (credential <$> hostD' <*> usernameD' <*> passwordD') 
+        let vD = credential <$> hostD' <*> usernameD' <*> passwordD'
+        submitE <- submitEB "连接"
+        return (vD, tagPromptlyDyn vD submitE)
+  
+
+loginFormDB :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Dynamic t Credential)
+loginFormDB = ((.) . (.) . (.)) (fmap fst) loginFormB
+  
+loginFormEB :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> Dynamic t T.Text -> Dynamic t T.Text -> m (Event t Credential)
+loginFormEB = ((.) . (.) . (.)) (fmap snd)  loginFormB
   
 {--
 tbodyList :: forall t m .

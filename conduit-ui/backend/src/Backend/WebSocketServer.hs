@@ -21,7 +21,7 @@ import System.Random (randomRIO)
 import Data.Maybe (fromMaybe)
 import Data.Functor ((<&>))
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, finally)
 import GHC.Int (Int64)
 import Data.String (IsString(..))
 import qualified Data.Text as T
@@ -59,6 +59,7 @@ import Network.SSH.Client.LibSSH2.Foreign
   , usernamePasswordAuth, sftpInit, sftpShutdown
   , sftpOpenFile, sftpCloseHandle, sftpWriteFileFromBS)
 
+import qualified Database.Dpi as Oracle
 
 serveWebSocket :: MonadSnap m => MVar AppST ->  m ()
 serveWebSocket appST = runWebSocketsSnap (wsConduitApp appST)
@@ -118,12 +119,25 @@ wsHandle appST (EventPulseAREQ name) = do
     ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder faas) eventPulse
   (return . EventPulseARES . mapLeft show) evalResult
 
-wsHandle appST (DSEFSSFtpFileRREQ (Credential hostName hostPort username password) path) = do
+{--
+wsHandle appST (DSOSQLCursorTableRREQ (Credential hostName hostPort username password) "Oracle" database) = do
+  let config = undefined
+      sql = ""
+  bracket Oracle.createContext Oracle.destroyContext $ \ctx ->
+    bracket (Oracle.createConnection ctx config return)
+            (\c -> Oracle.closeConnection Oracle.ModeConnCloseDefault c
+                   `finally` Oracle.releaseConnection c) $ \conn ->
+      bracket (Oracle.prepareStatement conn False sql) Oracle.releaseStatement $ \stmt -> do
+        r <- Oracle.executeStatement st Oracle.ModeExecDefault
+--}       
+        
+
+wsHandle appST (DSEFSSFtpDirectoryRREQ (Credential hostName hostPort username password) path) = do
   bracket (sessionInit (cs hostName) hostPort) sessionClose $ \s -> do
     liftIO $ usernamePasswordAuth s (cs username) (cs password)
     bracket (sftpInit s) sftpShutdown $ \sftp -> do
       sftpList <- sftpListDir sftp (cs $ fromMaybe "." path)
-      return . DSEFSSFtpFileRRES . Right $ sftpList <&> \(name, attrs) -> do
+      return . DSEFSSFtpDirectoryRRES . Right $ sftpList <&> \(name, attrs) -> do
         let size = (fromIntegral . saFileSize) attrs
             ctime = (realToFrac . saMtime) attrs
             xtype = (parseSFtpEntryType . saPermissions) attrs
@@ -148,15 +162,13 @@ dynHaskell stmt = do
                                    , I.QuasiQuotes]]
   I.runStmt (cs stmt)
 
-
-
-
 replRun :: IO ()
 replRun = do
   {--
   let code = toHaskellCode . toHaskellCodeBuilder exampleFaasCenter $ (head exampleEventPulses)
   T.putStrLn code
   (mapLeft show <$> (I.runInterpreter . dynHaskell) code) >>= print
-  --}
   wsHandle undefined
-    (DSEFSSFtpFileRREQ (Credential "10.132.37.201" 22 "op" "op") (Just ".")) >>= print
+    (DSEFSSFtpDirectoryRREQ (Credential "10.132.37.201" 22 "op" "op") (Just ".")) >>= print
+  --}
+  undefined

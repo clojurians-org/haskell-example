@@ -88,6 +88,11 @@ data DataSource = DSO_SQLCursor DSOSQLCursor
 instance J.ToJSON DataSource
 instance J.FromJSON DataSource
 
+_DSO_SQLCursor :: Prism DataSource DataSource DSOSQLCursor DSOSQLCursor
+_DSO_SQLCursor = prism DSO_SQLCursor $ \case
+    DSO_SQLCursor sqlCursor -> Right sqlCursor
+    x -> Left x
+
 getDataSourceId :: DataSource -> Maybe Int64
 getDataSourceId (DSO_SQLCursor sqlCursor) =  dsoSQLCursorXid sqlCursor
 getDataSourceId _ =  Nothing

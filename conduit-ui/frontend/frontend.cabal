@@ -14,6 +14,7 @@ library
                , text
                , semantic-reflex
                , random
+               , filepath
   exposed-modules:
     Frontend
   ghc-options: -Wall
