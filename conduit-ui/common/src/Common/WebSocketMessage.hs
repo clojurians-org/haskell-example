@@ -1,6 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 module Common.WebSocketMessage where
 
@@ -23,9 +24,11 @@ import Data.Bifunctor (bimap, first, second)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime)
 
+import Labels
+
 data TableEntry = TableEntry {
-    sqlEntryName :: T.Text
-  , sqlEntrySchemaName :: T.Text
+    sqlEntrySchema :: T.Text  
+  , sqlEntryName :: T.Text
   , sqlEntrySize :: T.Text
   , sqlEntryCTime :: POSIXTime
   } deriving (Generic, Show)
@@ -60,8 +63,8 @@ data WSRequestMessage = AppInitREQ
                     | DSOSQLCursorRREQ Int64
                     | DSOSQLCursorUREQ DSOSQLCursor
                     | DSOSQLCursorDREQ Int64
-                    | DSOSQLCursorDatabaseRREQ Credential T.Text (Maybe T.Text)
-                    | DSOSQLCursorTableRREQ Credential T.Text (Maybe T.Text)
+                    | DSOSQLCursorDatabaseRREQ Credential T.Text T.Text
+                    | DSOSQLCursorTableRREQ Credential T.Text T.Text T.Text
                     -- SFTP
                     | DSEFSSFtpCREQ DSEFSSFtp
                     | DSEFSSFtpDirectoryRREQ Credential (Maybe T.Text)
@@ -87,7 +90,7 @@ data WSResponseMessage = NeverRES
                      | DSOSQLCursorRRES (Either String DSOSQLCursor)
                      | DSOSQLCursorURES (Either String DSOSQLCursor)
                      | DSOSQLCursorDRES (Either String Int64)
-                     | DSOSQLCursorDatabaseRRES (Either String [TableEntry])
+                     | DSOSQLCursorDatabaseRRES (Either String [("schema" := T.Text, "table" := T.Text)])
                      | DSOSQLCursorTableRRES (Either String T.Text)
 
                     -- SFTP

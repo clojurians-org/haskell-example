@@ -76,6 +76,7 @@ wsConduitApp appST pending= do
 --   .| C.iterM print
    .| C.mapM (wsHandle appST)
    .| C.mapM_ (WS.sendTextData conn . J.encode)
+   .| C.sinkNull
 
 {--
 wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage
@@ -120,18 +121,8 @@ wsHandle appST (EventPulseAREQ name) = do
     ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder faas) eventPulse
   (return . EventPulseARES . mapLeft show) evalResult
 
-{--
-wsHandle appST (DSOSQLCursorTableRREQ (Credential hostName hostPort username password) "Oracle" database) = do
-  let config = undefined
-      sql = ""
-  bracket Oracle.createContext Oracle.destroyContext $ \ctx ->
-    bracket (Oracle.createConnection ctx config return)
-            (\c -> Oracle.closeConnection Oracle.ModeConnCloseDefault c
-                   `finally` Oracle.releaseConnection c) $ \conn ->
-      bracket (Oracle.prepareStatement conn False sql) Oracle.releaseStatement $ \stmt -> do
-        r <- Oracle.executeStatement st Oracle.ModeExecDefault
---}       
-        
+wsHandle appST (DSOSQLCursorDatabaseRREQ cr "Oracle" database) = do
+  DSOSQLCursorDatabaseRRES . Right <$> oracleShowTables cr database
 
 wsHandle appST (DSEFSSFtpDirectoryRREQ (Credential hostName hostPort username password) path) = do
   bracket (sessionInit (cs hostName) hostPort) sessionClose $ \s -> do

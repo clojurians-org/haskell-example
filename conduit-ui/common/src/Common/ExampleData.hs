@@ -41,7 +41,7 @@ exampleFaasCenter =
     )
     
 exampleDataSources :: [DataSource]
-exampleDataSources = do
+exampleDataSources =
   [ DSO_SQLCursor (def { dsoSQLCursorName = "sqlCursor_pg_tb_interface"
                        , dsoSQLCursorDesc = "sqlCursor_pg_tb_interface"
                        , dsoSQLCursorType = "PostgreSQL"
@@ -52,6 +52,16 @@ exampleDataSources = do
                        , dsoSQLCursorTable = "tb_interface"
                        , dsoSQLCursorFields = []
                        , dsoSQLCursorXid = Just 1})
+  , DSO_SQLCursor (def { dsoSQLCursorName = "sqlCursor_ora_tb_interface"
+                       , dsoSQLCursorDesc = "sqlCursor_ora_tb_interface"
+                       , dsoSQLCursorType = "Oracle"
+                       , dsoSQLCursorHost = "10.132.37.241:1521"
+                       , dsoSQLCursorDatabase = "EDMP"
+                       , dsoSQLCursorUsername = "KB"
+                       , dsoSQLCursorPassword = "KB123456"
+                       , dsoSQLCursorTable = "KB.TB_INTERFACE_LOG"
+                       , dsoSQLCursorFields = []
+                       , dsoSQLCursorXid = Just 2})         
     ]
 
 
