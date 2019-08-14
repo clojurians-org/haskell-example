@@ -24,7 +24,7 @@ import UnliftIO.STM as U
 import UnliftIO.Async as U
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 
-import Control.Concurrent.STM.TBMChan (TBMChan, newTBMChanIO, closeTBMChan, writeTBMChan)
+import Control.Concurrent.STM.TBMChan (TBMChan, newTBMChanIO, closeTBMChan, writeTBMChan, readTBMChan)
 
 tshow :: (Show a) => a -> T.Text
 tshow = cs . show
@@ -45,7 +45,8 @@ oracleChan (Credential hostName hostPort username password) database sql = do
       defCursorSize = 2000
       defBatchSize = 20000
   (reg, chan) <- allocate (newTBMChanIO defBatchSize) (U.atomically . closeTBMChan)
-  U.async $ bracketR Oracle.createContext Oracle.destroyContext $ \ctx ->
+  --U.async $
+  bracketR Oracle.createContext Oracle.destroyContext $ \ctx ->
     bracketR (Oracle.createConnection ctx config return)
              (\c -> Oracle.closeConnection Oracle.ModeConnCloseDefault c
                      `finally` Oracle.releaseConnection c) $ \conn ->
@@ -61,3 +62,11 @@ oracleChan (Credential hostName hostPort username password) database sql = do
       atomically $ writeTBMChan chan rows
       when more $ sinkRows chan stmt cursorSize
 
+
+myRepl :: IO ()
+myRepl = do
+  runResourceT $ do
+    chan <- oracleChan (credential "10.132.37.241:1521" "KB" "KB123456") "EDMP" "select * from tb_interface where rownum <= 2"
+    vs <- U.atomically (readTBMChan chan)
+    liftIO $ print vs
+    liftIO $ putStrLn "finished!"

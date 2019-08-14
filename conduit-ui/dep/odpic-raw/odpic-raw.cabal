@@ -17,42 +17,6 @@ maintainer:     Daniel YU <leptonyu@gmail.com>
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
-    README.md
-    include/LICENSE
-    include/dpi.h
-    include/dpiErrorMessages.h
-    include/dpiImpl.h
-    include/dpiConn.c
-    include/dpiContext.c
-    include/dpiData.c
-    include/dpiDebug.c
-    include/dpiDeqOptions.c
-    include/dpiEnqOptions.c
-    include/dpiEnv.c
-    include/dpiError.c
-    include/dpiGen.c
-    include/dpiGlobal.c
-    include/dpiHandleList.c
-    include/dpiHandlePool.c
-    include/dpiLob.c
-    include/dpiMsgProps.c
-    include/dpiObject.c
-    include/dpiObjectAttr.c
-    include/dpiObjectType.c
-    include/dpiOci.c
-    include/dpiOracleType.c
-    include/dpiPool.c
-    include/dpiRowid.c
-    include/dpiSodaColl.c
-    include/dpiSodaCollCursor.c
-    include/dpiSodaDb.c
-    include/dpiSodaDoc.c
-    include/dpiSodaDocCursor.c
-    include/dpiStmt.c
-    include/dpiSubscr.c
-    include/dpiUtils.c
-    include/dpiVar.c
 
 source-repository head
   type: git
@@ -70,39 +34,6 @@ library
   hs-source-dirs:
       src
   ghc-options: -Wall
-  include-dirs:
-      include
-  c-sources:
-      include/dpiConn.c
-      include/dpiContext.c
-      include/dpiData.c
-      include/dpiDebug.c
-      include/dpiDeqOptions.c
-      include/dpiEnqOptions.c
-      include/dpiEnv.c
-      include/dpiError.c
-      include/dpiGen.c
-      include/dpiGlobal.c
-      include/dpiHandleList.c
-      include/dpiHandlePool.c
-      include/dpiLob.c
-      include/dpiMsgProps.c
-      include/dpiObject.c
-      include/dpiObjectAttr.c
-      include/dpiObjectType.c
-      include/dpiOci.c
-      include/dpiOracleType.c
-      include/dpiPool.c
-      include/dpiRowid.c
-      include/dpiSodaColl.c
-      include/dpiSodaCollCursor.c
-      include/dpiSodaDb.c
-      include/dpiSodaDoc.c
-      include/dpiSodaDocCursor.c
-      include/dpiStmt.c
-      include/dpiSubscr.c
-      include/dpiUtils.c
-      include/dpiVar.c
   build-tools:
       c2hs
   build-depends:
@@ -113,26 +44,6 @@ library
     , resourcet
     , scientific
     , time
+  extra-libraries: odpic
   default-language: Haskell2010
 
-test-suite odpic-raw-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_odpic_raw
-  hs-source-dirs:
-      test
-  ghc-options: -Wall
-  build-tools:
-      c2hs
-  build-depends:
-      base >=4.9 && <5
-    , binary
-    , bytestring
-    , conduit
-    , hspec
-    , odpic-raw
-    , resourcet
-    , scientific
-    , time
-  default-language: Haskell2010

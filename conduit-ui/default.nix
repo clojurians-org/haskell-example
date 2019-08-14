@@ -69,6 +69,10 @@ project ./. ({ pkgs, hackGet, ... }: {
       }) {})) ;
 
     hlibssh2 = pkgs.haskell.lib.addBuildDepends (pkgs.haskell.lib.addPkgconfigDepends super.hlibssh2 [pkgs.libssh2]) [pkgs.libssh2] ;
+    odpic-raw = pkgs.haskell.lib.overrideCabal super.odpic-raw (drv : {
+      librarySystemDepends = [ pkgs.odpic ] ;
+      pkgconfigDepends = [ pkgs.odpic ] ;
+    }) ;
     # reflex-dom-contrib = pkgs.haskell.lib.doJailbreak super.reflex-dom-contrib;
   } ;
 })
