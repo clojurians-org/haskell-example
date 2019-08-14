@@ -43,12 +43,16 @@ dataSource_sqlCursor
   :: forall t m.
      ( DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m
      , HasFrontendState t (FaaSCenter, WSResponseMessage) m
-     )
+     , EventWriter t [WSRequestMessage] m)     
   => m ()
 dataSource_sqlCursor = do
   (stD, msgD) :: (Dynamic t FaaSCenter, Dynamic t WSResponseMessage) <- splitDynPure <$> askFrontendState
   display msgD
   let sqlCursorsD = stD <&> (^.. lens #dataSandbox . lens #dataSources . each . _DSO_SQLCursor)
+      databaseRE = fforMaybe (updated msgD) $ \case
+        DSOSQLCursorDatabaseRRES (Right r) ->  Just r
+        _ -> Nothing
+  databaseRD <- holdDyn [] databaseRE
   divClass "ui segment basic" $ do
     pageHeader "SQLCursor数据源" [ "SQL游标数据读取"
                                  , "支持PostgreSQL/Oracle/MySQL"
@@ -65,40 +69,31 @@ dataSource_sqlCursor = do
     sqlCursorD <- holdDyn def sqlCursorE
 
     (submitD, submitE) <- loginFormB (dsoSQLCursorHost <$> sqlCursorD) (dsoSQLCursorUsername <$> sqlCursorD) (dsoSQLCursorPassword <$> sqlCursorD)
+    tellEventSingle $ flip tagPromptlyDyn submitE $
+                     DSOSQLCursorDatabaseRREQ <$> submitD
+                                              <*> (dsoSQLCursorType <$> sqlCursorD)
+                                              <*> (dsoSQLCursorDatabase <$> sqlCursorD)
+
     return (submitD, submitE)
     
   submitClickedD <- holdDyn Nothing (Just () <$ submitE)
-  dyn (maybe blank (const (selectorWidget)) <$> submitClickedD)
+  dyn (maybe blank (const (selectorWidget submitD databaseRD)) <$> submitClickedD)
   return ()
   where
-    selectorWidget = 
+    navWidget databaseRD = do
+      elClass "table" "ui selectable table" $ do
+        el "thead" $ el "tr" $ trHeadList ["模式", "名称"]        
+        el "tbody" $ do
+
+          simpleList databaseRD $ \v -> el "tr" $ do
+            el "td" $ dynText (v <&> (^. lens #schema))
+            el "td" $ dynText (v <&> (^. lens #table))            
+
+    selectorWidget submitD databaseRD = 
       divClass "ui segment basic" $ do
           divClass "ui grid" $ do
             divClass "four wide column" $ do
-              divClass "ui segment" $ do
-                divClass "ui mini icon input" $ do
-                  inputElement def
-                  elClass "i" "circular search link icon" blank
-                divClass "ui list" $ do
-                  divClass "item" $ do
-                    elClass "i" "database icon" blank
-                    divClass "content" $ 
-                      elClass "h4" "ui header" $ text "information_schema"
-                    divClass "list" $ do
-                      divClass "item" $ do
-                        elClass "i" "expand icon" blank
-                        divClass "content" $ el "a" $ text "to_be_fill"
-                    elClass "i" "database icon" blank
-                    divClass "content" $
-                      elClass "h4" "ui header" $ text "public"
-                    divClass "list" $ do
-                      divClass "item" $ do
-                        elClass "i" "expand icon" blank
-                        divClass "content" $ el "a" $ text "hello"
-                      divClass "item" $ do
-                        elClass "i" "expand icon" blank
-                        divClass "content" $ el "a" $ text "world"
-        
+              navWidget databaseRD
             divClass "eight wide column" $ do
                 elClass "table" "ui table" $ do
                   el "thead" $ el "tr" $ do

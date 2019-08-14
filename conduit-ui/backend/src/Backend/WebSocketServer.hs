@@ -41,7 +41,7 @@ import Network.WebSockets.Snap (runWebSocketsSnap)
 
 import Control.Lens ((^.), (.~), view, over, at)
 import Control.Applicative ((<|>))
-import Labels (lens)
+import Labels 
 
 import Control.Monad.Except (runExceptT, liftEither)
 import Control.Monad.Trans (lift)
@@ -75,32 +75,9 @@ wsConduitApp appST pending= do
    .| CL.mapMaybe (id @(Maybe WSRequestMessage))
 --   .| C.iterM print
    .| C.mapM (wsHandle appST)
+--   .| C.iterM print         
    .| C.mapM_ (WS.sendTextData conn . J.encode)
    .| C.sinkNull
-
-{--
-wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage
-wsHandle appST = \case
-  HaskellCodeRunRequest r ->
-    return . HaskellCodeRunResponse . mapLeft show =<<
-      (I.runInterpreter . dynHaskell) r
-  EventPulseAREQ name -> do
---    appST
-    evalResult <- (I.runInterpreter . dynHaskell) "putStrLn \"hello world\""
-    (return . EventPulseARES . mapLeft show) evalResult
-  ELCronTimerCREQ (ELCronTimer name expr Nothing) -> do
-    rid <- randomRIO (10, 100)
-    return . ELCronTimerCRES . Right $ ELCronTimer name expr (Just rid)
-  ELCronTimerUREQ r -> do
-    putStrLn $ "ELCronTimerURES: " ++ (show r)
-    return . ELCronTimerURES . Right $ r
-  ELCronTimerDREQ r -> do
-    putStrLn $ "ELCronTimerDRES: " ++ (show r)
-    return . ELCronTimerDRES . Right $ r
-  unknown -> do
-    putStrLn $ "CronTimerDeleteResponse: " ++ (show unknown)
-    return . WSResponseUnknown $ unknown
---}
 
 wsHandle :: MVar AppST -> WSRequestMessage -> IO WSResponseMessage
 wsHandle appST AppInitREQ = do
@@ -122,7 +99,10 @@ wsHandle appST (EventPulseAREQ name) = do
   (return . EventPulseARES . mapLeft show) evalResult
 
 wsHandle appST (DSOSQLCursorDatabaseRREQ cr "Oracle" database) = do
-  DSOSQLCursorDatabaseRRES . Right <$> oracleShowTables cr database
+  putStrLn "aaa"
+  -- DSOSQLCursorDatabaseRRES . Right <$> oracleShowTables cr database
+  DSOSQLCursorDatabaseRRES . Right <$> return [ (#schema := "larluo", #table :="haskell")
+                                              , (#schema := "larluo", #table := "clojure")]
 
 wsHandle appST (DSEFSSFtpDirectoryRREQ (Credential hostName hostPort username password) path) = do
   bracket (sessionInit (cs hostName) hostPort) sessionClose $ \s -> do

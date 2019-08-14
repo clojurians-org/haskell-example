@@ -10,7 +10,7 @@ import Prelude
 import Reflex.Dom.Core
 import qualified Data.Text as T
 
-import Control.Monad (void, forM)
+import Control.Monad (void, forM, forM_)
 import Control.Monad.Fix (MonadFix)
 import Data.Functor ((<&>))
 import Data.Semigroup (stimes)
@@ -63,12 +63,17 @@ pageHeader title xs = do
         forM xs (el "li" . elClass "h4" "ui header" . text)
   return ()
 
+trHeadList :: forall t m .(DomBuilder t m, PostBuild t m)
+  => [T.Text] -> m ()
+trHeadList xs= forM_ xs (elClass "th" "" . text)
+
+  
 theadList :: forall t m .(DomBuilder t m, PostBuild t m)
   => [T.Text] -> m ()
 theadList xs = do
   el "thead" $ el "tr" $ do
     elClass "th" "" $ checkbox False def
-    forM xs (elClass "th" "" . text)
+    trHeadList xs
   return ()
 
 loginFormB :: forall t m. (DomBuilder t m, PostBuild t m)

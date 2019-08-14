@@ -61,7 +61,6 @@ data DataNetworkRoute :: * -> * where
 deriving instance Show (DataNetworkRoute a)
 
 data EventLakeRoute :: * -> * where
-  EventLakeRoute_HttpRequest :: EventLakeRoute ()
   EventLakeRoute_CronTimer :: EventLakeRoute ()
   EventLakeRoute_FileWatcher :: EventLakeRoute ()
 deriving instance Show (EventLakeRoute a)
@@ -123,10 +122,8 @@ backendRouteEncoder = handleEncoder (const (InL BackendRoute_Missing :/ ())) $
       FrontendRoute_EventLake -> PathSegment "eventSource" $
 --        maybeEncoder (unitEncoder mempty) $ pathComponentEncoder $ \case
         pathComponentEncoder $ \case
-          EventLakeRoute_HttpRequest -> PathSegment "httpRequest" $ unitEncoder mempty          
           EventLakeRoute_CronTimer -> PathSegment "cronTimer" $ unitEncoder mempty
           EventLakeRoute_FileWatcher -> PathSegment "fileWatcher" $ unitEncoder mempty
-          
       FrontendRoute_DataSandbox -> PathSegment "dataSandbox" $
         pathComponentEncoder $ \case
           DataSandboxRoute_StateContainer -> PathSegment "stateContainer" $
