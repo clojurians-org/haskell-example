@@ -66,16 +66,26 @@ exampleDataSources =
 
 
 exampleDataServices :: [DataService]
-exampleDataServices = do
+exampleDataServices = 
   [ DSE_FileService_SFTP (def { dsefsSFtpName = "sftp_my_201"
                               , dsefsSFtpDesc = "sftp_my_201"
-                              , dsefsSFtpHost = "10.132.37.200:22"
+                              , dsefsSFtpHost = "10.132.37.201:22"
                               , dsefsSFtpUsername = "op"
                               , dsefsSFtpPassword = "op"
                               , dsefsSFtpFilePath = "./"
                               , dsefsSFtpFilePattern = "larluo.txt"
                               , dsefsSFtpXid = (Just 1)
                               })
+  , DSE_FileService_SFTP (def { dsefsSFtpName = "sftp_my_202"
+                              , dsefsSFtpDesc = "sftp_my_202"
+                              , dsefsSFtpHost = "10.132.37.202:22"
+                              , dsefsSFtpUsername = "op"
+                              , dsefsSFtpPassword = "op"
+                              , dsefsSFtpFilePath = "./"
+                              , dsefsSFtpFilePattern = "larluo.txt"
+                              , dsefsSFtpXid = (Just 2)
+                              })
+    
     ]
 
 exampleEventPulses :: [EventPulse]

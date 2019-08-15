@@ -20,18 +20,31 @@ import Control.Monad.Fix (MonadFix)
 import Data.Default (Default(def))
 import GHC.Int (Int64)
 
-trE :: forall t m. (DomBuilder t m) => m () -> m (Event t ())
-trE = fmap (void . domEvent Click . fst) . el' "tr"
+trEB :: forall t m a. (DomBuilder t m) => m a -> m (Event t ())
+trEB = fmap (void . domEvent Dblclick . fst) . el' "tr"
+
+trE :: forall t m a. (DomBuilder t m) => m a -> m (Event t ())
+trE = trEB
 
 createIcon :: forall t m. (DomBuilder t m) => m ()
-createIcon = el "td" $ elClass "i" "pencil icon" blank
+createIcon = el "td" $ elClass "i" "paint brush icon" blank
 
 selectE :: forall t m.(DomBuilder t m, PostBuild t m) => m ()
 selectE = void $ el "td" $ checkbox False def
 
+tdDynToggle :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t Bool -> m (Dynamic t Bool)
+tdDynToggle bD = el "td" $ divClass "ui toggle checkbox" $ dynCheckboxDB bD <* el "label" blank
+
+
+tdDynInput :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t T.Text -> m (Dynamic t T.Text)
+tdDynInput = el "td" . divClass "ui mini input" . dynInputDB
 tdDyn :: forall t m. (DomBuilder t m, PostBuild t m)
   => Dynamic t T.Text -> m (Dynamic t T.Text)
-tdDyn = el "td" . divClass "ui mini input" . dynInputDB
+tdDyn = tdDynInput
+
+
 
 class (Default a) => ToTable a where
 --  toTR :: a -> m (Behavior t a)

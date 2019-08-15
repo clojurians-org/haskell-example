@@ -64,7 +64,7 @@ data WSRequestMessage = AppInitREQ
                     | DSOSQLCursorUREQ DSOSQLCursor
                     | DSOSQLCursorDREQ Int64
                     | DSOSQLCursorDatabaseRREQ Credential T.Text T.Text
-                    | DSOSQLCursorTableRREQ Credential T.Text T.Text T.Text
+                    | DSOSQLCursorTableRREQ Credential T.Text T.Text (T.Text, T.Text)
                     -- SFTP
                     | DSEFSSFtpCREQ DSEFSSFtp
                     | DSEFSSFtpDirectoryRREQ Credential (Maybe T.Text)
@@ -90,8 +90,11 @@ data WSResponseMessage = NeverRES
                      | DSOSQLCursorRRES (Either String DSOSQLCursor)
                      | DSOSQLCursorURES (Either String DSOSQLCursor)
                      | DSOSQLCursorDRES (Either String Int64)
-                     | DSOSQLCursorDatabaseRRES (Either String [("schema" := T.Text, "table" := T.Text)])
-                     | DSOSQLCursorTableRRES (Either String T.Text)
+                     | DSOSQLCursorDatabaseRRES (Either String [( "schema" := T.Text
+                                                                , "table" := T.Text)])
+                     | DSOSQLCursorTableRRES (Either String [( "name" := T.Text
+                                                             , "type" := T.Text
+                                                             , "desc" := T.Text)])
 
                     -- SFTP
                      | DSEFSSFtpDirectoryRRES (Either String [SFtpEntry])

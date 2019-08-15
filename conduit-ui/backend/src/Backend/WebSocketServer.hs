@@ -95,14 +95,18 @@ wsHandle appST (EventPulseAREQ name) = do
   let eventPulseMaybe = view getter faas
   evalResult <- runExceptT $ do
     eventPulse <- liftEither $ (maybeToRight "EventPulse_Not_Found" eventPulseMaybe)
-    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell . toHaskellCode . toHaskellCodeBuilder faas) eventPulse
+    let haskellCode = toHaskellCode $ toHaskellCodeBuilder faas eventPulse
+    ExceptT $ mapLeft show <$> (I.runInterpreter . dynHaskell) haskellCode
   (return . EventPulseARES . mapLeft show) evalResult
 
 wsHandle appST (DSOSQLCursorDatabaseRREQ cr "Oracle" database) = do
-  putStrLn "aaa"
-  -- DSOSQLCursorDatabaseRRES . Right <$> oracleShowTables cr database
+  DSOSQLCursorDatabaseRRES . Right <$> oracleShowTables cr database
+  {--
   DSOSQLCursorDatabaseRRES . Right <$> return [ (#schema := "larluo", #table :="haskell")
                                               , (#schema := "larluo", #table := "clojure")]
+  --}
+wsHandle appST (DSOSQLCursorTableRREQ cr "Oracle" database (schema, table) ) = do
+  DSOSQLCursorTableRRES . Right <$> oracleDescribeTable cr database (schema, table)
 
 wsHandle appST (DSEFSSFtpDirectoryRREQ (Credential hostName hostPort username password) path) = do
   bracket (sessionInit (cs hostName) hostPort) sessionClose $ \s -> do

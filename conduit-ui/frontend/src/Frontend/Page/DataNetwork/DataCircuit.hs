@@ -9,10 +9,12 @@
 module Frontend.Page.DataNetwork.DataCircuit
   (dataNetwork_dataCircuit) where
 
-import Common.Types.DataNetwork
-import Common.Types.DataSandbox
+import Common.Types
 import Common.ExampleData
 import Common.WebSocketMessage
+import Frontend.FrontendStateT
+import Frontend.Widget
+import Frontend.Class
 import Prelude
 
 import Reflex.Dom.Core
@@ -31,6 +33,8 @@ import Data.Functor ((<&>))
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Concurrent (MVar, newMVar, putMVar, modifyMVar, modifyMVar_, readMVar, threadDelay)
 import qualified Data.Tree as TR
+import Labels
+import Control.Lens hiding (lens)
 
 dataCircuitDOM :: DomBuilder t m
   => TR.Tree DataCircuitPart -> m ()
@@ -41,102 +45,36 @@ dataCircuitDOM rootNode =
       divClass "header" $ text "DataCircuit-数据电路"
     toDOM undefined rootNode
   
-dataNetwork_dataCircuit_handle
-  :: forall t m r.
-     ( MonadHold t m, MonadFix m
-     , MonadIO m, MonadIO (Performable m), PerformEvent t m)
-  => MVar r -> Event t WSResponseMessage -> m (Event t WSResponseMessage, Dynamic t [DataCircuit])
-dataNetwork_dataCircuit_handle _ wsResponseEvt = do
-  return (wsResponseEvt, constDyn exampleDataCircuits)
 
-theadUI
-  :: forall t m .
-     (DomBuilder t m, PostBuild t m)
-  => m ()
-theadUI = do
-  el "thead" $ el "tr" $ do
-    el "th"  $ divClass "ui fitted checkbox fields" $ checkbox False def >> el "label" blank
-    el "th"  $ text "名称"
-    el "th"  $ text "描述"
-    el "th"  $ text "状态容器"
-    el "th"  $ text "数据源"
-    el "th"  $ text "数据服务"       
---    elClass "th" "" $ text "子数据电路"
---    elClass "th" "" $ text "数据导管"
---    elClass "th" "" $ text "部件组合器"
-
-    {--
-    elClass "th" "" $ text "配置数据模式"    
-    elClass "th" "" $ text "请求数据模式"
-    elClass "th" "" $ text "响应数据模式"
-
-    --}
-
-tbodyUI
-  :: forall t m .
-     (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-   => Dynamic t [DataCircuit] -> m ()
-tbodyUI wsDyn = do
-  el "tbody" $ do
-    elClass "tr" "" $ do
-      el "td" $ elClass' "button" "ui circular icon button teal"  $ elClass "i" "plus icon" blank
-      -- name
-      el "td" $ divClass "ui input" $ inputElement def
-      -- description
-      el "td" $ divClass "ui input" $ inputElement def
-      -- stateContainer
-      el "td" $ divClass "ui input" $ inputElement def
-      -- dataSource
-      el "td" $ divClass "ui input" $ inputElement def
-      -- dataService
-      el "td" $ divClass "ui input" $ inputElement def
-    simpleList wsDyn $ \conduitDyn -> do
-      pb <- getPostBuild
-      elDynAttr "tr" (constDyn M.empty) $ do
-        deleteSelect <- el "td" $ divClass "ui fitted checkbox fields" $ do
-          checkbox False (def & checkboxConfig_setValue .~ (False <$ never))
-          el "label" $ blank
-        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $
-          inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> dciName
-            , tag (current conduitDyn <&> dciName) pb ]
-        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
-          inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> dciDesc
-            , tag (current conduitDyn <&> dciDesc) pb ]
-        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
-          inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dsahStateContainers . dciDataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dsahStateContainers . dciDataSandboxHolder) pb ]
-        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
-          inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dsahDataSources . dciDataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dsahDataSources . dciDataSandboxHolder) pb ]
-        elDynAttr "td" (constDyn M.empty) $ divClass "ui input" $ do
-          inputElement $ def & inputElementConfig_setValue .~ leftmost
-            [ updated conduitDyn <&> cs . show . dsahDataServices . dciDataSandboxHolder
-            , tag (current conduitDyn <&> cs . show . dsahDataServices . dciDataSandboxHolder) pb ]            
-        blank
+trDataCircuit :: forall t m. (DomBuilder t m, PostBuild t m)
+  => Dynamic t DataCircuit -> m ()
+trDataCircuit dciD = do
+  tdDynInput (dciD <&> dciName)
+  tdDynInput (dciD <&> dciDesc)
+  tdDynInput (dciD <&> cs . show . dsahStateContainers . dciDataSandboxHolder)
+  tdDynInput (dciD <&> cs . show . dsahDataSources . dciDataSandboxHolder)
+  tdDynInput (dciD <&> cs . show . dsahDataServices . dciDataSandboxHolder)
   return ()
 
 dataNetwork_dataCircuit
   :: forall t m .
-     (DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m)
-  => (Event t WSResponseMessage, Dynamic t [DataCircuit])
-  -> m (Event t [WSRequestMessage])
-dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
-  divClass "ui segment basic" $
-    divClass "ui grid" $ divClass "eight wide column" $ divClass "ui message" $ do
-      elClass "h2" "ui header" $ do
-        text "数据电路"
-      elClass "ul" "list" $ do
-        el "li" $ elClass "h4" "ui header" $ text "由数据导管连接而成"
-        el "li" $ elClass "h4" "ui header" $ text "可包含子数据电路"
-        el "li" $ elClass "h4" "ui header" $ text "按需构建业务系统"
-        el "li" $ elClass "h4" "ui header" $ text "分布式调度"
-
+     ( DomBuilder t m, PostBuild t m, MonadFix m, MonadHold t m
+     , HasFrontendState t (FaaSCenter, WSResponseMessage) m)
+  => m ()
+dataNetwork_dataCircuit = do
+  (stD, msgD) :: (Dynamic t FaaSCenter, Dynamic t WSResponseMessage) <- splitDynPure <$> askFrontendState
+  let dcisD = stD <&> (^.. lens #dataNetwork . lens #dataCircuits . each)  
   divClass "ui segment basic" $ do
-    elClass "table" "ui blue selectable table" $ theadUI >> tbodyUI wsDyn
+    pageHeader "数据电路" [ "由数据导管连接而成"
+                          , "可包含子数据电路"
+                          , "按需构建业务系统"
+                          , "分布式调度"]
+  
+  divClass "ui segment basic" $ do
+    elClass "table" "ui blue selectable table" $ do
+      theadList  ["名称", "描述", "状态容器", "数据源", "数据服务"]
+      simpleList dcisD $ \v ->
+        trE $ selectE >> trDataCircuit  v
     divClass "" $ do
       divClass "ui top attached warning segment" $ do
         divClass "ui horizontal divided list" $ do
@@ -190,7 +128,6 @@ dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
                   divClass "content" $ divClass "header" $ text "逻辑碎片"
           dataCircuitDOM examplePartCombinator
                       
-    divClass "ui hidden divider" blank
     divClass "" $ do
       divClass "ui top attached segment" $ do
         elClass "h4" "ui header" $ text "代码浏览器"
@@ -199,5 +136,4 @@ dataNetwork_dataCircuit (wsEvt, wsDyn)  = do
           & initialAttributes .~ ("rows" =: "20")
           & textAreaElementConfig_initialValue .~ exampleConduitCode
        
-
-  return never
+  return ()

@@ -200,6 +200,7 @@ updateGlobal = \case
   msg@(AppInitRES state0) -> Endo $ const (state0, msg)
   msg@(DSEFSSFtpDirectoryRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)
   msg@(DSOSQLCursorDatabaseRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)
+  msg@(DSOSQLCursorTableRRES _) -> Endo $ \(stat, oldMsg) -> (stat, msg)  
   _ -> mempty
 
 page :: forall t js m.
@@ -215,10 +216,11 @@ page = do
       FrontendRoute_Main -> text "my main"
       FrontendRoute_DataNetwork -> subRoute_ $ \case
         DataNetworkRoute_EventPulse -> dataNetwork_eventPulse
-        DataNetworkRoute_EffectEngine -> void $ dataNetwork_effectEngine undefined
-        DataNetworkRoute_LogicFragement -> void $ dataNetwork_logicFragement undefined
+        DataNetworkRoute_DataCircuit -> dataNetwork_dataCircuit
         DataNetworkRoute_DataConduit ->  void $ dataNetwork_dataConduit undefined
-        DataNetworkRoute_DataCircuit -> void $ dataNetwork_dataCircuit undefined
+        DataNetworkRoute_LogicFragement -> void $ dataNetwork_logicFragement undefined        
+        DataNetworkRoute_EffectEngine -> void $ dataNetwork_effectEngine undefined
+
       FrontendRoute_EventLake -> subRoute_ $ \case
         EventLakeRoute_CronTimer -> void $ eventLake_cronTimer undefined
         EventLakeRoute_FileWatcher -> text "my EventLakeRoute_FileWatcher"
